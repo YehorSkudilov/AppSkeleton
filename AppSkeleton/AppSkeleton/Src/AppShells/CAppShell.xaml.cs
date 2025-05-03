@@ -34,7 +34,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
     AdManager adManager;
   
     bool profileMenuOpen = false;
-    public CAppShell(ObservableCollection<NavIconItem> navIconItems)
+    public CAppShell(ObservableCollection<NavIconItem> navIconItems, AppSettings appSettings)
 	{
 		InitializeComponent();
 
@@ -44,7 +44,8 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         //Temp Placeholders
         Username = "John";
         adManager = new AdManager();
-      
+        AppName.Text = appSettings.AppName;
+
         BindingContext = this;
     }
 

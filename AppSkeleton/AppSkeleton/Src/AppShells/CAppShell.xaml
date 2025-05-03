@@ -20,7 +20,7 @@
 
             <HorizontalStackLayout HorizontalOptions="Center" Grid.Column="1">
                 <Image Margin="5,8" Source="logo.png"/>
-                <Label HorizontalOptions="Center" FontAttributes="Bold" VerticalOptions="Center" FontSize="20">MyRecipeBook</Label>
+                <Label x:Name="AppName" HorizontalOptions="Center" FontAttributes="Bold" VerticalOptions="Center" FontSize="20"></Label>
             </HorizontalStackLayout>
 
             <Grid Grid.Column="2">
