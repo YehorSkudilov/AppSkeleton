@@ -54,17 +54,21 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    string SavePage(object page, string name)
+    string SavePage(LoadPageParams lpp)
     {
-        if (name == null)
+        if (lpp.Name == null)
         {
-            name = page.GetType().Name;
+            lpp.Name = lpp.Page.GetType().Name;
         }
-        if (!pages.ContainsKey(name))
+        if (!pages.ContainsKey(lpp.Name))
         {
-            pages.Add(name, page);
+            pages.Add(lpp.Name, lpp.Page);
         }
-        return name;
+        else if(lpp.Replace)
+        {
+            pages[lpp.Name] = lpp.Page;
+        }
+            return lpp.Name;
     }
 
     public void SetDefaultPage(int index)
@@ -76,6 +80,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         fontImageSource.Color = (Color)Application.Current.Resources["PrimaryDark"];
 
         lastSelected = image;
+        NavIconItems[index].LoadPageCommand.Execute(null);
     }
 
     public void LoadPage(LoadPageParams lpp)
@@ -92,7 +97,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
             lastSelected = lpp.Image;
         }
 
-        string className = SavePage(lpp.Page, lpp.Name);
+        string className = SavePage(lpp);
         Content.Content = (pages[className] as ContentPage).Content;
     }
 
