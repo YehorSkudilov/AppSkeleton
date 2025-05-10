@@ -54,13 +54,17 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    void SavePage(object page)
+    string SavePage(object page, string name)
     {
-        string name = page.GetType().Name;
+        if (name == null)
+        {
+            name = page.GetType().Name;
+        }
         if (!pages.ContainsKey(name))
         {
             pages.Add(name, page);
         }
+        return name;
     }
 
     public void SetDefaultPage(int index)
@@ -74,21 +78,21 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         lastSelected = image;
     }
 
-    public void LoadPage(object page, Image image = null, string name = null)
+    public void LoadPage(LoadPageParams lpp)
     {
-        if (image != null)
+        if (lpp.Image != null)
         {
             if (lastSelected != null)
             {
                 FontImageSource lastSelectedFontImageSource = ((FontImageSource)lastSelected.Source);
                 lastSelectedFontImageSource.Color = Colors.White;
             }
-            FontImageSource fontImageSource = ((FontImageSource)image.Source);
+            FontImageSource fontImageSource = ((FontImageSource)lpp.Image.Source);
             fontImageSource.Color = (Color)Application.Current.Resources["PrimaryDark"]; ;
-            lastSelected = image;
+            lastSelected = lpp.Image;
         }
-        SavePage(page);
-        string className = page.GetType().Name;
+
+        string className = SavePage(lpp.Page, lpp.Name);
         Content.Content = (pages[className] as ContentPage).Content;
     }
 
@@ -157,7 +161,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
 
     private void AccountButtonClicked(object sender, EventArgs e)
     {
-        LoadPage(new Account());
+        LoadPage(new LoadPageParams { Page = new Account() });
         ProfileMenuClicked();
     }
 }
