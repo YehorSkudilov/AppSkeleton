@@ -7,6 +7,6 @@ namespace AppSkeleton
         public object Page { get; set; } 
         public Image? Image { get; set; }
         public string? Name { get; set; }
-        public bool? Replace { get; set; }
+        public bool Replace { get; set; } = false;
     }
 }
