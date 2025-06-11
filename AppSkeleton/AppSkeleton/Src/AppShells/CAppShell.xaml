@@ -104,17 +104,17 @@
                             <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
                                 <Image HeightRequest="15">
                                     <Image.Source>
-                                        <FontImageSource FontFamily="FASolid" Size="100" Glyph="{x:Static fa:Solid.Coins}"/>
+                                        <FontImageSource FontFamily="FASolid" Color="{Binding CoinsColor}" Size="100" Glyph="{x:Static fa:Solid.Coins}"/>
                                     </Image.Source>
                                 </Image>
-                                <Label Text="{Binding Coins}"/>
+                                <Label TextColor="{Binding CoinsColor}" Text="{Binding Coins}"/>
                             </HorizontalStackLayout>
                         </VerticalStackLayout>
                     </Grid>
 
                     <Button Text="Account" Clicked="AccountButtonClicked" Background="{DynamicResource PrimaryDark}" HeightRequest="30" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" TextColor="{DynamicResource White}"></Button>
                     <Button Text="Settings" Background="{DynamicResource PrimaryDark}" HeightRequest="30" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" TextColor="{DynamicResource White}"></Button>
-                    <Button x:Name="GetPointsButton" Text="Get Points" Clicked="OnCreateRewardedAdClicked" Background="{DynamicResource PrimaryDark}" HeightRequest="30" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" TextColor="{DynamicResource White}"></Button>
+                    <Button x:Name="GetPointsButton" Text="Get Coins" Clicked="OnCreateRewardedAdClicked" Background="{DynamicResource PrimaryDark}" HeightRequest="30" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" TextColor="{DynamicResource White}"></Button>
                 </VerticalStackLayout>
             </Grid>
 

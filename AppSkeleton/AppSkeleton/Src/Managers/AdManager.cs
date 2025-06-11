@@ -1,19 +1,23 @@
-﻿using System.Diagnostics;
+﻿
 
 #if ANDROID || IOS
 using Plugin.AdMob.Services;
 using Plugin.AdMob;
+using System.Diagnostics;
 #endif
 
 namespace AppSkeleton
 {
     class AdManager
-    {
+    {    
+        Action CallBack;
+
 #if ANDROID || IOS
         private readonly IRewardedAdService _rewardedAdService;
 #endif
-        public AdManager()
+        public AdManager(Action callBack)
         {
+            CallBack = callBack;
 #if ANDROID || IOS
 
             _rewardedAdService = ServiceProvider.GetRequiredService<IRewardedAdService>();
@@ -54,9 +58,7 @@ namespace AppSkeleton
         private void UserDidEarnReward(RewardItem rewardItem)
         {
             Debug.WriteLine($"User earned {rewardItem.Amount} {rewardItem.Type}.");
-            // Replace these with actual references to your UI or state management
-            // GetPointsButton.IsEnabled = true;
-            // Coins += 10;
+            CallBack.Invoke();
         }
 #endif
     }

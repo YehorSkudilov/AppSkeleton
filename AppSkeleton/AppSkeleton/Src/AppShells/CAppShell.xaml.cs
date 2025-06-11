@@ -25,6 +25,20 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         }
     }
 
+    private Color coinsColor;
+    public Color CoinsColor
+    {
+        get => coinsColor;
+        set
+        {
+            if (coinsColor != value)
+            {
+                coinsColor = value;
+                OnPropertyChanged(nameof(CoinsColor));
+            }
+        }
+    }
+
     Dictionary<string, object> pages;
     bool sideNavOpen = false;
     double sideNavOpenWidth = 200;
@@ -43,7 +57,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
 
         //Temp Placeholders
         Username = "John";
-        adManager = new AdManager();
+        adManager = new AdManager(AfterAd);
         AppName.Text = appSettings.AppName;
 
         BindingContext = this;
@@ -59,6 +73,34 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
 
         return true;
     }
+
+    public bool UsePoints(int pointsUsed)
+    {
+        if (Coins >= pointsUsed)
+        {
+            Coins -= pointsUsed;
+            return true;
+        }
+        else
+        {
+            ProfileMenuClicked();
+            this.DisplayAlert("Not Enough Coins", "Click Get Coins to Get More", "Ok");
+            NotEnoughPointsAnimation(); 
+            return false;
+        }
+    }
+
+    private async void NotEnoughPointsAnimation()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            CoinsColor = Colors.Red;
+            await Task.Delay(500); // Shorter flash looks snappier
+            CoinsColor = Colors.White;
+            await Task.Delay(500); // Prevents immediate overwrite
+        }
+    }
+
 
     protected void OnPropertyChanged(string name)
     {
@@ -180,6 +222,12 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
             button.IsEnabled = false;
             adManager.LoadAd();
         }
+    }
+
+    void AfterAd()
+    {
+        Coins += 10;
+        GetPointsButton.IsEnabled = true;
     }
 
 
