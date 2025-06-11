@@ -8,7 +8,7 @@ namespace AppSkeleton;
 
 public partial class CAppShell : ContentPage, INotifyPropertyChanged
 {
-
+    Stack<LoadPageParams> pageHistory;
     public ObservableCollection<NavIconItem> NavIconItems { get; set; }
     public event PropertyChangedEventHandler PropertyChanged;
     public string Username { get; }
@@ -37,7 +37,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
     public CAppShell(ObservableCollection<NavIconItem> navIconItems, AppSettings appSettings)
 	{
 		InitializeComponent();
-
+        pageHistory = new Stack<LoadPageParams>();
         NavIconItems = navIconItems;
         pages = new Dictionary<string, object>();
 
@@ -47,6 +47,17 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         AppName.Text = appSettings.AppName;
 
         BindingContext = this;
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+        if(!(pageHistory.Count > 1))
+            return false;   
+
+        pageHistory.Pop();
+        LoadPage(pageHistory.Pop());
+
+        return true;
     }
 
     protected void OnPropertyChanged(string name)
@@ -72,10 +83,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         var gridAtIndex = NavBarFlexLayout.Children[index] as Grid;
         var image = gridAtIndex?.FindByName<Image>("Image");
 
-        FontImageSource fontImageSource = ((FontImageSource)image.Source);
-        fontImageSource.Color = (Color)Application.Current.Resources["PrimaryDark"];
-
-        lastSelected = image;
+        NavIconItems[index].LoadPageCommand.Execute(image);
     }
 
     public void LoadPage(LoadPageParams lpp)
@@ -94,6 +102,19 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
 
         string className = SavePage(lpp.Page, lpp.Name);
         Content.Content = (pages[className] as ContentPage).Content;
+        if ((pageHistory.Count > 0) && (pageHistory.FirstOrDefault().Page.GetType() != lpp.Page.GetType()))
+        {
+            pageHistory.Push(lpp);
+            Debug.WriteLine("added new" + pageHistory.FirstOrDefault().Page.GetType() + " " + lpp.Page.GetType());
+
+        }
+
+        if (!(pageHistory.Count > 0))
+        {
+            pageHistory.Push(lpp);
+            Debug.WriteLine("added default");
+        }
+
     }
 
 
@@ -112,7 +133,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
             SideNav.Animate("SideNavCollapse", new Animation(v => SideNav.WidthRequest = v, SideNav.Width, sideNavCloseWidth), 16, 250, Easing.Linear);
         }
     }    
-    private void ProfileMenuClicked(object sender = null, EventArgs e = null)
+    public void ProfileMenuClicked(object sender = null, EventArgs e = null)
     {
         if (!profileMenuOpen)
         {
