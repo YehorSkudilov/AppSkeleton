@@ -74,6 +74,16 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         return true;
     }
 
+    public bool EnoughPoints(int points)
+    {
+        bool enough = Coins >= points;
+        if (!enough)
+        {
+            NotEnoughPoints();
+        }
+        return enough;
+    }
+
     public bool UsePoints(int pointsUsed)
     {
         if (Coins >= pointsUsed)
@@ -83,11 +93,16 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         }
         else
         {
-            ProfileMenuClicked();
-            this.DisplayAlert("Not Enough Coins", "Click Get Coins to Get More", "Ok");
-            NotEnoughPointsAnimation(); 
+            NotEnoughPoints();
             return false;
         }
+    }
+
+    void NotEnoughPoints()
+    {
+        ProfileMenuClicked();
+        this.DisplayAlert("Not Enough Coins", "Click Get Coins to Get More", "Ok");
+        NotEnoughPointsAnimation();
     }
 
     private async void NotEnoughPointsAnimation()
@@ -146,7 +161,7 @@ public partial class CAppShell : ContentPage, INotifyPropertyChanged
         }
 
         string className = SavePage(lpp);
-        Content.Content = (pages[className] as ContentPage).Content;
+        Content.Content = (pages[className] as ContentView);
         if ((pageHistory.Count > 0) && (pageHistory.FirstOrDefault().Page.GetType() != lpp.Page.GetType()))
         {
             pageHistory.Push(lpp);
