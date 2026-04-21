@@ -105,8 +105,7 @@ public partial class CNavBar : ContentView
 
     public void SelectItem(CNavItem selectedNavItem)
     {
-        if (selectedNavItem == null)
-            return;
+
 
         foreach (var navItem in CNavIconItems)
         {
@@ -117,7 +116,10 @@ public partial class CNavBar : ContentView
             }
         }
 
-    selectedNavItem.IsSelected = true;
+        if (selectedNavItem == null)
+            return;
+
+        selectedNavItem.IsSelected = true;
         selectedNavItem.FontFamily = SelectedFontFamily;
 
         selectedNavItem.Action?.Invoke();
