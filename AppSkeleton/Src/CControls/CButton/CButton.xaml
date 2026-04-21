@@ -16,7 +16,7 @@
                 StrokeThickness="1"
                 Background="#20ffffff">
             <Border.StrokeShape>
-                <RoundRectangle CornerRadius="30"/>
+                <RoundRectangle CornerRadius="50"/>
             </Border.StrokeShape>
         </Border>
 
@@ -26,7 +26,7 @@
                HeightRequest="{Binding IconHeightRequest}"
                WidthRequest="{Binding IconWidthRequest}">
             <Image.Source>
-                <FontImageSource FontFamily="{Binding CurrentFontFamily}"
+                <FontImageSource Size="100" FontFamily="{Binding CurrentFontFamily}"
                                  Glyph="{Binding Icon}"/>
             </Image.Source>
         </Image>
