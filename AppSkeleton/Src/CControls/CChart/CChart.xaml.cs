@@ -27,25 +27,28 @@ public partial class CChart : ContentView
 
     private void SetChart(IDrawable drawable)
     {
-        // unsubscribe old if needed
         if (_drawable is CLineChart oldLine)
             oldLine.RedrawRequested -= OnRedrawRequested;
 
         if (_drawable is CPieChart oldPie)
             oldPie.RedrawRequested -= OnRedrawRequested;
 
-        _drawable = drawable;
+        if (_drawable is CSegmentedBarChart oldBar)
+            oldBar.RedrawRequested -= OnRedrawRequested;
 
+        _drawable = drawable;
         ChartView.Drawable = drawable;
 
-        // subscribe new
         if (drawable is CLineChart line)
             line.RedrawRequested += OnRedrawRequested;
 
         if (drawable is CPieChart pie)
             pie.RedrawRequested += OnRedrawRequested;
 
-        ChartView.Invalidate();
+        if (drawable is CSegmentedBarChart bar)
+            bar.RedrawRequested += OnRedrawRequested;
+
+        ChartView.Invalidate(); // 🔥 ALWAYS FORCE
     }
 
     private void OnRedrawRequested()
@@ -60,7 +63,7 @@ public partial class CChart : ContentView
     {
         var control = (CChart)bindable;
 
-        if (newValue is IDrawable drawable)
-            control.SetChart(drawable);
+        control.SetChart(newValue as IDrawable);
+        control.ChartView.Invalidate(); // 🔥 CRITICAL
     }
 }

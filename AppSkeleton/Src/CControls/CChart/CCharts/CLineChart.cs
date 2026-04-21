@@ -9,30 +9,30 @@ public class CLineChart : BindableObject, IDrawable
     public event Action? RedrawRequested;
 
     // -------------------------
-    // VALUES
+    // Entries
     // -------------------------
-    public static readonly BindableProperty ValuesProperty =
+    public static readonly BindableProperty EntriesProperty =
         BindableProperty.Create(
-            nameof(Values),
-            typeof(ObservableCollection<float>),
+            nameof(Entries),
+            typeof(ObservableCollection<CChartEntry>),
             typeof(CLineChart),
-            new ObservableCollection<float>(),
-            propertyChanged: OnValuesChanged);
+            new ObservableCollection<CChartEntry>(),
+            propertyChanged: OnEntriesChanged);
 
-    public ObservableCollection<float> Values
+    public ObservableCollection<CChartEntry> Entries
     {
-        get => (ObservableCollection<float>)GetValue(ValuesProperty);
-        set => SetValue(ValuesProperty, value);
+        get => (ObservableCollection<CChartEntry>)GetValue(EntriesProperty);
+        set => SetValue(EntriesProperty, value);
     }
 
-    private static void OnValuesChanged(BindableObject bindable, object oldValue, object newValue)
+    private static void OnEntriesChanged(BindableObject bindable, object oldValue, object newValue)
     {
         var chart = (CLineChart)bindable;
 
-        if (oldValue is ObservableCollection<float> oldCol)
+        if (oldValue is ObservableCollection<CChartEntry> oldCol)
             oldCol.CollectionChanged -= chart.OnCollectionChanged;
 
-        if (newValue is ObservableCollection<float> newCol)
+        if (newValue is ObservableCollection<CChartEntry> newCol)
             newCol.CollectionChanged += chart.OnCollectionChanged;
 
         chart.RequestRedraw();
@@ -52,7 +52,7 @@ public class CLineChart : BindableObject, IDrawable
             typeof(bool),
             typeof(CLineChart),
             false,
-            propertyChanged: OnSmoothChanged);
+            propertyChanged: (b, o, n) => ((CLineChart)b).RequestRedraw());
 
     public bool Smooth
     {
@@ -60,15 +60,6 @@ public class CLineChart : BindableObject, IDrawable
         set => SetValue(SmoothProperty, value);
     }
 
-    private static void OnSmoothChanged(BindableObject bindable, object oldValue, object newValue)
-    {
-        var chart = (CLineChart)bindable;
-        chart.RequestRedraw();
-    }
-
-    // -------------------------
-    // REDRAW SYSTEM
-    // -------------------------
     private void RequestRedraw()
     {
         RedrawRequested?.Invoke();
@@ -79,19 +70,19 @@ public class CLineChart : BindableObject, IDrawable
     // -------------------------
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
-        if (Values == null || Values.Count < 2)
+        if (Entries == null || Entries.Count < 2)
             return;
 
-        float paddingTop = 20;
-        float paddingBottom = 25;
-        float paddingLeft = 10;
-        float paddingRight = 10;
+        float paddingTop = 25;
+        float paddingBottom = 65;
+        float paddingLeft = 20;
+        float paddingRight = 20;
 
         float width = dirtyRect.Width - paddingLeft - paddingRight;
         float height = dirtyRect.Height - paddingTop - paddingBottom;
 
-        float max = Values.Max();
-        float min = Values.Min();
+        float max = Entries.Max(v => v.Value);
+        float min = Entries.Min(v => v.Value);
 
         float range = max - min;
         if (range == 0) range = 1;
@@ -101,14 +92,14 @@ public class CLineChart : BindableObject, IDrawable
         min -= yPadding;
         range = max - min;
 
-        float stepX = width / (Values.Count - 1);
+        float stepX = width / (Entries.Count - 1);
 
         var points = new List<PointF>();
 
-        for (int i = 0; i < Values.Count; i++)
+        for (int i = 0; i < Entries.Count; i++)
         {
             float x = paddingLeft + i * stepX;
-            float y = paddingTop + (height - ((Values[i] - min) / range * height));
+            float y = paddingTop + (height - ((Entries[i].Value - min) / range * height));
 
             points.Add(new PointF(x, y));
         }
@@ -151,26 +142,64 @@ public class CLineChart : BindableObject, IDrawable
 
         canvas.DrawPath(path);
 
+        // -------------------------
+        // AXIS LINE (draw ONCE)
+        // -------------------------
+        float axisY = paddingTop + height;
+
+        canvas.StrokeColor = Colors.Gray;
+        canvas.StrokeSize = 1;
+
+        canvas.DrawLine(
+            paddingLeft,
+            axisY,
+            paddingLeft + width,
+            axisY);
+
+        // -------------------------
         // POINTS + LABELS
+        // -------------------------
         for (int i = 0; i < points.Count; i++)
         {
             var p = points[i];
+            var entry = Entries[i];
 
-            canvas.FillColor = Colors.DodgerBlue;
+            // POINT
+            canvas.FillColor = entry.Color ?? Colors.DodgerBlue;
             canvas.FillCircle(p.X, p.Y, 3);
 
-            canvas.FontColor = Colors.White;
             canvas.FontSize = 12;
 
-            float labelOffset = 14;
+            // -------------------------
+            // VALUE LABEL (above/below point)
+            // -------------------------
+            float valueY = p.Y - 14;
 
-            if (p.Y - labelOffset < paddingTop)
-                labelOffset = -14;
+            if (valueY < paddingTop)
+                valueY = p.Y + 14;
+
+            valueY = Math.Clamp(valueY, 10, dirtyRect.Height - 10);
+
+            canvas.FontColor = Colors.White;
 
             canvas.DrawString(
-                Values[i].ToString("0"),
+                entry.Value.ToString("0"),
                 p.X,
-                p.Y - labelOffset,
+                valueY,
+                HorizontalAlignment.Center);
+
+            // -------------------------
+            // X LABEL (below axis)
+            // -------------------------
+            float labelX = Math.Clamp(p.X, paddingLeft + 10, paddingLeft + width - 10);
+            float labelY = axisY + 15;
+
+            canvas.FontColor = Colors.Gray;
+
+            canvas.DrawString(
+                entry.Label,
+                labelX,
+                labelY,
                 HorizontalAlignment.Center);
         }
     }
