@@ -19,7 +19,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.41" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -37,6 +37,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Update="Src\CControls\CChart\CChart.xaml.cs">
+	    <DependentUpon>CChart.xaml</DependentUpon>
+	  </Compile>
 	  <Compile Update="Src\CControls\NavBar\CNavBar.xaml.cs">
 	    <DependentUpon>CNavBar.xaml</DependentUpon>
 	  </Compile>
@@ -44,6 +47,9 @@
 
 	<ItemGroup>
 	  <MauiXaml Update="Src\CControls\CButton\CButton.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Src\CControls\CChart\CChart.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Src\CControls\CView\CView.xaml">
