@@ -43,7 +43,12 @@ public partial class CButton : ContentView
 
     // ---------------- FONT ----------------
     public static readonly BindableProperty IconFontFamilyProperty =
-        BindableProperty.Create(nameof(IconFontFamily), typeof(string), typeof(CButton));
+        BindableProperty.Create(
+            nameof(IconFontFamily),
+            typeof(string),
+            typeof(CButton),
+            default(string),
+            propertyChanged: OnFontFamilyChanged);
 
     public string IconFontFamily
     {
@@ -62,6 +67,32 @@ public partial class CButton : ContentView
 
     public static readonly BindableProperty CurrentFontFamilyProperty =
         BindableProperty.Create(nameof(CurrentFontFamily), typeof(string), typeof(CButton));
+
+    public static readonly BindableProperty CButtonBackgroundColorProperty =
+        BindableProperty.Create(
+            nameof(CButtonBackgroundColor),
+            typeof(Color),
+            typeof(CButton),
+            Color.FromArgb("#20ffffff"));
+
+    public Color CButtonBackgroundColor
+    {
+        get => (Color)GetValue(CButtonBackgroundColorProperty);
+        set => SetValue(CButtonBackgroundColorProperty, value);
+    }
+
+    public static readonly BindableProperty CButtonStrokeProperty =
+    BindableProperty.Create(
+        nameof(CButtonStroke),
+        typeof(Color),
+        typeof(CButton),
+       Color.FromArgb("#40ffffff"));
+
+    public Color CButtonStroke
+    {
+        get => (Color)GetValue(CButtonStrokeProperty);
+        set => SetValue(CButtonStrokeProperty, value);
+    }
 
     public string CurrentFontFamily
     {
@@ -119,5 +150,13 @@ public partial class CButton : ContentView
     {
         CurrentFontFamily = IconFontFamily;
 
+    }
+
+    private static void OnFontFamilyChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CButton button)
+        {
+            button.CurrentFontFamily = button.IconFontFamily;
+        }
     }
 }

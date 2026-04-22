@@ -4,17 +4,15 @@
              x:Class="AppSkeleton.CButton">
 
     <Grid x:Name="MainGrid"
-          Loaded="MainGrid_Loaded"
-          VerticalOptions="Center"
-          HorizontalOptions="Center">
+          Loaded="MainGrid_Loaded">
 
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnTapped"/>
         </Grid.GestureRecognizers>
 
-        <Border Stroke="#40ffffff"
+        <Border Stroke="{Binding CButtonStroke}"
                 StrokeThickness="1"
-                Background="#20ffffff">
+                BackgroundColor="{Binding CButtonBackgroundColor}">
             <Border.StrokeShape>
                 <RoundRectangle CornerRadius="50"/>
             </Border.StrokeShape>
