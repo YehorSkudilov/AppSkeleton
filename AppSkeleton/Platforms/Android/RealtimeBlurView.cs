@@ -16,52 +16,28 @@ namespace AppSkeleton;
 public class RealtimeBlurView : View
 {
     private readonly float[] mRadii = new float[8];
-
-    private float mDownsampleFactor; // default 4
-
-    private int mOverlayColor; // default #aaffffff
-
-    private float mBlurRadius; // default 10dp (0 < r <= 25)
-
+    private float mDownsampleFactor;
+    private int mOverlayColor;
+    private float mBlurRadius;
     private readonly IBlurImpl mBlurImpl;
-
     private bool mDirty;
-
     private Bitmap mBitmapToBlur, mBlurredBitmap;
-
     private Canvas mBlurringCanvas;
-
     private bool mIsRendering;
-
     private readonly Paint mPaint = new();
-
-    // mDecorView should be the root view of the activity (even if you are on a different window like a dialog)
-    // private View mDecorView;
     private JniWeakReference<View> _weakDecorView;
-
-    // If the view is on different root view (usually means we are on a PopupWindow),
-    // we need to manually call invalidate() in onPreDraw(), otherwise we will not be able to see the changes
     private bool mDifferentRoot;
-
     private bool _isContainerShown = true;
-
     private bool _autoUpdate = true;
-
     private static int RENDERING_COUNT;
-
     private static int BLUR_IMPL;
     private Thickness borderThickness = new();
 
-    /// <summary>
-    /// 更改内容不透明度
-    /// 用于截图前隐藏，截图后内容恢复显示
-    /// </summary>
     public Action<bool> SetContentVisible;
 
     [Obsolete("此类库 在>=Android12 已经不再使用，谷歌已经更新了一套新的模糊操作类库")]
     public RealtimeBlurView(Context context, Action<bool> visibleAction, string formsId = null) : base(context)
     {
-        // provide your own by override getBlurImpl()
         mBlurImpl = GetBlurImpl();
         preDrawListener = new PreDrawListener(this);
         SetContentVisible = visibleAction;
@@ -71,14 +47,12 @@ public class RealtimeBlurView : View
     {
     }
 
-    /// <summary>
-    /// 设置边框
-    /// </summary>
-    /// <param name="borderThickness"></param>
     public void SetBorderThickness(Thickness borderThickness)
     {
         this.borderThickness = borderThickness;
-        preDrawListener.OnPreDraw(borderThickness, SetContentVisible);
+        // Guard: only trigger pre-draw if listener and action are ready
+        if (preDrawListener != null && SetContentVisible != null)
+            preDrawListener.OnPreDraw(borderThickness, SetContentVisible);
     }
 
     protected IBlurImpl GetBlurImpl()
@@ -92,15 +66,10 @@ public class RealtimeBlurView : View
             bmp.Recycle();
             BLUR_IMPL = 3;
         }
-        catch
-        {
-        }
+        catch { }
 
         if (BLUR_IMPL == 0)
-        {
-            // fallback to empty impl, which doesn't have blur effect
             BLUR_IMPL = -1;
-        }
 
         return BLUR_IMPL switch
         {
@@ -117,7 +86,7 @@ public class RealtimeBlurView : View
         if (mDownsampleFactor != factor)
         {
             mDownsampleFactor = factor;
-            mDirty = true; // may also change blur radius
+            mDirty = true;
             ReleaseBitmap();
             Invalidate();
         }
@@ -126,14 +95,12 @@ public class RealtimeBlurView : View
     private void SubscribeToPreDraw(View decorView)
     {
         if (decorView.IsNullOrDisposed() || decorView.ViewTreeObserver.IsNullOrDisposed()) return;
-
         decorView.ViewTreeObserver.AddOnPreDrawListener(preDrawListener);
     }
 
     private void UnsubscribeToPreDraw(View decorView)
     {
         if (decorView.IsNullOrDisposed() || decorView.ViewTreeObserver.IsNullOrDisposed()) return;
-
         decorView.ViewTreeObserver.RemoveOnPreDrawListener(preDrawListener);
     }
 
@@ -176,13 +143,9 @@ public class RealtimeBlurView : View
         if (mDecorView != rootView)
         {
             UnsubscribeToPreDraw(mDecorView);
-
             _weakDecorView = new JniWeakReference<View>(rootView);
-
             if (IsAttachedToWindow)
-            {
                 OnAttached(rootView);
-            }
         }
     }
 
@@ -204,9 +167,7 @@ public class RealtimeBlurView : View
                 mDifferentRoot = mDecorView.RootView != RootView;
                 if (mDifferentRoot)
                     mDecorView.PostInvalidate();
-            },
-                8 //AndroidMaterialFrameRenderer.BlurProcessingDelayMilliseconds 模糊处理延迟毫秒
-             );
+            }, 8);
         }
         else
         {
@@ -227,44 +188,29 @@ public class RealtimeBlurView : View
 
     private void SetAutoUpdate(bool autoUpdate)
     {
-        if (autoUpdate)
-        {
-            EnableAutoUpdate();
-        }
-        else
-        {
-            DisableAutoUpdate();
-        }
+        if (autoUpdate) EnableAutoUpdate();
+        else DisableAutoUpdate();
     }
 
     private void EnableAutoUpdate()
     {
         if (_autoUpdate) return;
-
         _autoUpdate = true;
         using var handler = new Handler(Looper.MainLooper);
-        //获取根视图，实时获取 ，间隔80ms
         handler.PostDelayed(() =>
-             {
-                 var mDecorView = GetRootView();
-                 if (mDecorView == null || !_autoUpdate) return;
-                 SubscribeToPreDraw(mDecorView);
-             },
-            50  //AndroidMaterialFrameRenderer.BlurAutoUpdateDelayMilliseconds 模糊自动更新延迟（毫秒）
-            );
+        {
+            var mDecorView = GetRootView();
+            if (mDecorView == null || !_autoUpdate) return;
+            SubscribeToPreDraw(mDecorView);
+        }, 50);
     }
 
     private void DisableAutoUpdate()
     {
-        if (!_autoUpdate)
-            return;
-
+        if (!_autoUpdate) return;
         _autoUpdate = false;
         var mDecorView = GetRootView();
-
-        if (mDecorView == null)
-            return;
-
+        if (mDecorView == null) return;
         UnsubscribeToPreDraw(mDecorView);
     }
 
@@ -275,7 +221,6 @@ public class RealtimeBlurView : View
             mBitmapToBlur.Recycle();
             mBitmapToBlur = null;
         }
-
         if (!mBlurredBitmap.IsNullOrDisposed())
         {
             mBlurredBitmap.Recycle();
@@ -290,6 +235,7 @@ public class RealtimeBlurView : View
             Release();
             return false;
         }
+
         float downsampleFactor = mDownsampleFactor;
         float radius = mBlurRadius / downsampleFactor;
         if (radius > 25)
@@ -297,13 +243,19 @@ public class RealtimeBlurView : View
             downsampleFactor = downsampleFactor * radius / 25;
             radius = 25;
         }
+
         int width = Width;
         int height = Height;
+
+        // Guard: skip if dimensions are not valid yet
+        if (width <= 0 || height <= 0) return false;
+
         int scaledWidth = Math.Max(1, (int)(width / downsampleFactor));
         int scaledHeight = Math.Max(1, (int)(height / downsampleFactor));
         bool dirty = mDirty;
 
-        if (mBlurringCanvas == null || mBlurredBitmap == null || mBlurredBitmap.Width != scaledWidth || mBlurredBitmap.Height != scaledHeight)
+        if (mBlurringCanvas == null || mBlurredBitmap == null
+            || mBlurredBitmap.Width != scaledWidth || mBlurredBitmap.Height != scaledHeight)
         {
             dirty = true;
             ReleaseBitmap();
@@ -311,25 +263,18 @@ public class RealtimeBlurView : View
             try
             {
                 mBitmapToBlur = Bitmap.CreateBitmap(scaledWidth, scaledHeight, Bitmap.Config.Argb8888);
-
                 if (mBitmapToBlur == null) return false;
 
                 mBlurringCanvas = new Canvas(mBitmapToBlur);
                 mBlurredBitmap = Bitmap.CreateBitmap(scaledWidth, scaledHeight, Bitmap.Config.Argb8888);
-
                 if (mBlurredBitmap == null) return false;
 
                 r = true;
             }
-            catch /*(OutOfMemoryError e)*/
-            {
-                // Bitmap.createBitmap() may cause OOM error
-                // Simply ignore and fallback
-            }
+            catch { }
             finally
             {
-                if (!r)
-                    Release();
+                if (!r) Release();
             }
 
             if (!r) return false;
@@ -338,14 +283,11 @@ public class RealtimeBlurView : View
         if (dirty)
         {
             if (mBlurImpl.Prepare(Context, mBitmapToBlur, radius))
-            {
                 mDirty = false;
-            }
             else
-            {
                 return false;
-            }
         }
+
         return true;
     }
 
@@ -359,6 +301,9 @@ public class RealtimeBlurView : View
     private class PreDrawListener : Java.Lang.Object, ViewTreeObserver.IOnPreDrawListener
     {
         private readonly JniWeakReference<RealtimeBlurView> _weakBlurView;
+        private readonly double _density;
+        private Thickness _borderThickness = new();
+        private Action<bool> SetContentVisible;
 
         public PreDrawListener(RealtimeBlurView blurView)
         {
@@ -366,62 +311,43 @@ public class RealtimeBlurView : View
             _density = DeviceDisplay.Current.MainDisplayInfo.Density;
         }
 
-        public PreDrawListener(IntPtr handle, JniHandleOwnership transfer) : base(handle, transfer)
-        {
-        }
+        public PreDrawListener(IntPtr handle, JniHandleOwnership transfer) : base(handle, transfer) { }
 
-        /// <summary>
-        /// 屏幕缩放率
-        /// </summary>
-        private readonly double _density;
-
-        private Thickness _borderThickness = new();
-
-        /// <summary>
-        /// 控制顶层视图透明度
-        /// </summary>
-        private Action<bool> SetContentVisible;
-
-        public void OnPreDraw(Thickness thickness, Action<bool> contentvisibleAction)
+        public void OnPreDraw(Thickness thickness, Action<bool> contentVisibleAction)
         {
             _borderThickness = thickness;
-            SetContentVisible = contentvisibleAction;
+            SetContentVisible = contentVisibleAction;
             OnPreDraw();
         }
 
-        //渲染次数
         private int renderCount = 0;
 
         public bool OnPreDraw()
         {
-            #region 隔帧对View截图
+            // Guard: action not yet wired up
+            if (SetContentVisible == null) return true;
 
-            //隔帧截图渲染，也就表示在安卓中的帧数减半，为了AcrylicView层截图时不受AcrylicView.Content层的影响，
-            //故在截图前使其AcrylicView.Content透明，后再进行截图
-            //故造成影响是 帧数减半
+            if (!_weakBlurView.TryGetTarget(out var blurView)) return false;
+
+            // Guard: view dimensions not valid yet — skip this draw pass entirely
+            if (blurView.Width <= 0 || blurView.Height <= 0) return true;
+
             if (renderCount == 2)
             {
                 renderCount = 0;
                 return true;
             }
             renderCount++;
-            //截图前将图层顶部视图透明，使其不可见
-
-            #endregion 隔帧对View截图
 
             SetContentVisible(false);
 
-            if (!_weakBlurView.TryGetTarget(out var blurView))
-            {
-                return false;
-            }
-
             if (!blurView._isContainerShown)
             {
+                SetContentVisible(true); // restore before returning
                 return false;
             }
-            var mDecorView = blurView.GetRootView();
 
+            var mDecorView = blurView.GetRootView();
             int[] locations = new int[2];
             Bitmap oldBmp = blurView.mBlurredBitmap;
             View decor = mDecorView;
@@ -430,15 +356,9 @@ public class RealtimeBlurView : View
             {
                 bool redrawBitmap = blurView.mBlurredBitmap != oldBmp;
 
-                //获取view所在屏幕的左上角位置
                 decor.GetLocationOnScreen(locations);
-                //获取view在父视图中左上角位置
                 blurView.GetLocationOnScreen(locations);
 
-                //float x = locations[0];
-                //float y = locations[1];
-
-                // just erase transparent
                 blurView.mBitmapToBlur.EraseColor(Color.Transparent);
                 int rc = blurView.mBlurringCanvas.Save();
                 blurView.mIsRendering = true;
@@ -449,7 +369,6 @@ public class RealtimeBlurView : View
                     float sy = (float)blurView.mBitmapToBlur.Height / blurView.Height;
 
                     blurView.mBlurringCanvas.Scale(sx, sy);
-
                     blurView.mBlurringCanvas.Translate(-locations[0], -locations[1]);
                     decor.Background?.Draw(blurView.mBlurringCanvas);
                     decor.Draw(blurView.mBlurringCanvas);
@@ -460,16 +379,14 @@ public class RealtimeBlurView : View
                     RENDERING_COUNT--;
                     blurView.mBlurringCanvas.RestoreToCount(rc);
                 }
+
                 blurView.Blur(blurView.mBitmapToBlur, blurView.mBlurredBitmap);
 
                 if (redrawBitmap || blurView.mDifferentRoot)
-                {
                     blurView.Invalidate();
-                }
             }
-            //截图前将图层顶部视图不透明，使其可见
-            SetContentVisible(true);
 
+            SetContentVisible(true);
             return true;
         }
     }
@@ -478,9 +395,7 @@ public class RealtimeBlurView : View
     {
         Context ctx = Context;
         for (int i = 0; i < 4 && ctx != null && ctx is not Activity && ctx is ContextWrapper wrapper; i++)
-        {
             ctx = wrapper.BaseContext;
-        }
 
         return (ctx is Activity activity) ? activity.Window.DecorView : null;
     }
@@ -488,16 +403,11 @@ public class RealtimeBlurView : View
     protected override void OnAttachedToWindow()
     {
         base.OnAttachedToWindow();
-
         var mDecorView = GetRootView();
         if (mDecorView == null)
-        {
             SetRootView(GetActivityDecorView());
-        }
         else
-        {
             OnAttached(mDecorView);
-        }
     }
 
     protected override void OnDetachedFromWindow()
@@ -513,7 +423,6 @@ public class RealtimeBlurView : View
     public override void Draw(Canvas canvas)
     {
         if (mIsRendering) return;
-
         if (RENDERING_COUNT <= 0)
             base.Draw(canvas);
     }
@@ -524,7 +433,6 @@ public class RealtimeBlurView : View
         DrawRoundedBlurredBitmap(canvas, mBlurredBitmap);
     }
 
-    //绘制圆角模糊视图
     private void DrawRoundedBlurredBitmap(Canvas canvas, Bitmap blurredBitmap)
     {
         if (blurredBitmap != null)
@@ -545,30 +453,20 @@ public class RealtimeBlurView : View
 
     public void SetCornerRadius(float topLeft, float topRight, float bottomRight, float bottomLeft)
     {
-        var radius = new float[8] { topLeft, topLeft, topRight, topRight, bottomRight, bottomRight, bottomLeft, bottomLeft };
-        if (mRadii == radius) return;
-
         mDirty = true;
-
-        mRadii[0] = topLeft;
-        mRadii[1] = topLeft;
-
-        mRadii[2] = topRight;
-        mRadii[3] = topRight;
-
-        mRadii[4] = bottomRight;
-        mRadii[5] = bottomRight;
-
-        mRadii[6] = bottomLeft;
-        mRadii[7] = bottomLeft;
-
+        mRadii[0] = topLeft; mRadii[1] = topLeft;
+        mRadii[2] = topRight; mRadii[3] = topRight;
+        mRadii[4] = bottomRight; mRadii[5] = bottomRight;
+        mRadii[6] = bottomLeft; mRadii[7] = bottomLeft;
         Invalidate();
     }
 
     protected override void OnSizeChanged(int w, int h, int oldw, int oldh)
     {
         base.OnSizeChanged(w, h, oldw, oldh);
-        if (w > 0 && h > 0)
+
+        // Guard: only proceed when both dimensions are valid AND action is ready
+        if (w > 0 && h > 0 && preDrawListener != null && SetContentVisible != null)
             preDrawListener.OnPreDraw(borderThickness, SetContentVisible);
     }
 }

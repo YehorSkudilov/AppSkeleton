@@ -1,5 +1,7 @@
 ﻿
 
+using System.Runtime.CompilerServices;
+
 namespace AppSkeleton;
 
 public partial class AcrylicView : ContentView, IAcrylicView
@@ -21,7 +23,16 @@ public partial class AcrylicView : ContentView, IAcrylicView
     public static readonly BindableProperty TintColorProperty = BindableProperty.Create(
         nameof(TintColor),
         typeof(Color),
-        typeof(AcrylicView), DeviceInfo.Current.Platform == DevicePlatform.Android ? Colors.LightGray : Colors.Transparent);
+        typeof(AcrylicView),
+        Colors.Transparent);  // Safe default
+
+    public AcrylicView()
+    {
+
+        // Platform check safely done at instance creation time
+        if (DeviceInfo.Current.Platform == DevicePlatform.Android)
+            TintColor = Colors.LightGray;
+    }
 
     public static readonly BindableProperty TintOpacityProperty = BindableProperty.Create(
         nameof(TintOpacity),
@@ -46,6 +57,14 @@ public partial class AcrylicView : ContentView, IAcrylicView
         set => SetValue(CornerRadiusProperty, value);
     }
 
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        if (width <= 0 || height <= 0)
+            return;
+
+        base.OnSizeAllocated(width, height);
+    }
+
     public EffectStyle EffectStyle
     {
         get => (EffectStyle)GetValue(EffectStyleProperty);
@@ -64,8 +83,19 @@ public partial class AcrylicView : ContentView, IAcrylicView
         set => SetValue(TintOpacityProperty, value);
     }
 
-    //protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
-    //{
-    //    base.OnPropertyChanged(propertyName);
-    //}
+    protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+
+        if (propertyName == WidthRequestProperty.PropertyName ||
+            propertyName == HeightRequestProperty.PropertyName)
+        {
+            // Ensure we have valid dimensions before triggering any native rendering
+            if (WidthRequest > 0 && HeightRequest > 0)
+            {
+                // Trigger re-render only when BOTH are valid
+                InvalidateMeasure();
+            }
+        }
+    }
 }

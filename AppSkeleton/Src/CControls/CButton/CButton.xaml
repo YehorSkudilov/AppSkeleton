@@ -7,34 +7,32 @@
 
     <Grid x:Name="MainGrid" Loaded="MainGrid_Loaded">
 
-        <!--<Grid.GestureRecognizers>
+        <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnTapped" />
-        </Grid.GestureRecognizers>-->
+        </Grid.GestureRecognizers>
+
 
 
         <local:AcrylicView
-            Margin="0,0,0,10"
-            Padding="10"
-            BorderColor="#40ffffff"
-            CornerRadius="25"
+            BorderColor="{Binding CButtonStroke}"
+            CornerRadius="50"
             EffectStyle="Custom"
-            TintColor="#20ffffff"
+            TintColor="{Binding CButtonBackgroundColor}"
             TintOpacity=".5" />
 
-
-        <!--<Grid>
-            <Image Margin="{Binding IconPadding}">
-                <Image.Source>
-                    <FontImageSource
-                        FontFamily="{Binding CurrentFontFamily}"
-                        Glyph="{Binding Icon}"
-                        Size="100" />
-                </Image.Source>
-            </Image>
-        </Grid>-->
-
-
-
+        <Image
+            Margin="{Binding IconPadding}"
+            HeightRequest="{Binding IconHeightRequest}"
+            MinimumHeightRequest="0"
+            MinimumWidthRequest="0"
+            WidthRequest="{Binding IconWidthRequest}">
+            <Image.Source>
+                <FontImageSource
+                    FontFamily="{Binding CurrentFontFamily}"
+                    Glyph="{Binding Icon}"
+                    Size="100" />
+            </Image.Source>
+        </Image>
     </Grid>
 
 </ContentView>
