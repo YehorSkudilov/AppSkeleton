@@ -1,35 +1,40 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-xmlns:acrylic="clr-namespace:Xe.AcrylicView;assembly=Xe.AcrylicView"
-             x:Class="AppSkeleton.CButton">
+<ContentView
+    x:Class="AppSkeleton.CButton"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:AppSkeleton">
 
-    <Grid x:Name="MainGrid"
-          Loaded="MainGrid_Loaded">
+    <Grid x:Name="MainGrid" Loaded="MainGrid_Loaded">
 
-        <Grid.GestureRecognizers>
-            <TapGestureRecognizer Tapped="OnTapped"/>
-        </Grid.GestureRecognizers>
-
+        <!--<Grid.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnTapped" />
+        </Grid.GestureRecognizers>-->
 
 
-        <acrylic:AcrylicView
-                EffectStyle="Custom"    
-                TintColor="{Binding CButtonBackgroundColor}"
-                BorderColor="{Binding CButtonStroke}"
-                TintOpacity=".5"  
-                CornerRadius="50"/>
+        <local:AcrylicView
+            Margin="0,0,0,10"
+            Padding="10"
+            BorderColor="#40ffffff"
+            CornerRadius="25"
+            EffectStyle="Custom"
+            TintColor="#20ffffff"
+            TintOpacity=".5" />
 
-                <Image MinimumHeightRequest="0"
-               MinimumWidthRequest="0"
-               Margin="{Binding IconPadding}"
-               HeightRequest="{Binding IconHeightRequest}"
-               WidthRequest="{Binding IconWidthRequest}">
+
+        <!--<Grid>
+            <Image Margin="{Binding IconPadding}">
                 <Image.Source>
-                    <FontImageSource Size="100" FontFamily="{Binding CurrentFontFamily}"
-                                 Glyph="{Binding Icon}"/>
+                    <FontImageSource
+                        FontFamily="{Binding CurrentFontFamily}"
+                        Glyph="{Binding Icon}"
+                        Size="100" />
                 </Image.Source>
             </Image>
-            </Grid>
+        </Grid>-->
+
+
+
+    </Grid>
 
 </ContentView>

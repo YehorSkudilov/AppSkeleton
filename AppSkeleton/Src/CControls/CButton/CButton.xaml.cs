@@ -12,25 +12,6 @@ public partial class CButton : ContentView
         set => SetValue(IconProperty, value);
     }
 
-    // ---------------- SIZE ----------------
-    public static readonly BindableProperty IconHeightRequestProperty =
-        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CButton), 24.0);
-
-    public double IconHeightRequest
-    {
-        get => (double)GetValue(IconHeightRequestProperty);
-        set => SetValue(IconHeightRequestProperty, value);
-    }
-
-    public static readonly BindableProperty IconWidthRequestProperty =
-        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), 24.0);
-
-    public double IconWidthRequest
-    {
-        get => (double)GetValue(IconWidthRequestProperty);
-        set => SetValue(IconWidthRequestProperty, value);
-    }
-
     // ---------------- PADDING ----------------
     public static readonly BindableProperty IconPaddingProperty =
         BindableProperty.Create(nameof(IconPadding), typeof(Thickness), typeof(CButton), new Thickness(0));
@@ -148,7 +129,7 @@ public partial class CButton : ContentView
 
     private void MainGrid_Loaded(object sender, EventArgs e)
     {
-        CurrentFontFamily = IconFontFamily;
+        //CurrentFontFamily = IconFontFamily;
 
     }
 
