@@ -19,6 +19,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AcrylicView.Maui" Version="3.0.1" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.41" />
 	</ItemGroup>
 
@@ -64,6 +65,12 @@
 	  <None Update="Src\CControls\NavBar\NavBar.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Platforms\Android\" />
+	  <Folder Include="Platforms\iOS\" />
+	  <Folder Include="Platforms\Windows\" />
 	</ItemGroup>
 
 </Project>

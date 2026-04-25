@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+xmlns:acrylic="clr-namespace:Xe.AcrylicView;assembly=Xe.AcrylicView"
              x:Class="AppSkeleton.CButton">
 
     <Grid x:Name="MainGrid"
@@ -10,24 +11,25 @@
             <TapGestureRecognizer Tapped="OnTapped"/>
         </Grid.GestureRecognizers>
 
-        <Border Stroke="{Binding CButtonStroke}"
-                StrokeThickness="1"
-                BackgroundColor="{Binding CButtonBackgroundColor}">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="50"/>
-            </Border.StrokeShape>
-        </Border>
 
-        <Image MinimumHeightRequest="0"
+
+        <acrylic:AcrylicView
+                EffectStyle="Custom"    
+                TintColor="{Binding CButtonBackgroundColor}"
+            BorderColor="{Binding CButtonStroke}"
+                TintOpacity=".15 "  
+                CornerRadius="50"/>
+
+                <Image MinimumHeightRequest="0"
                MinimumWidthRequest="0"
                Margin="{Binding IconPadding}"
                HeightRequest="{Binding IconHeightRequest}"
                WidthRequest="{Binding IconWidthRequest}">
-            <Image.Source>
-                <FontImageSource Size="100" FontFamily="{Binding CurrentFontFamily}"
+                <Image.Source>
+                    <FontImageSource Size="100" FontFamily="{Binding CurrentFontFamily}"
                                  Glyph="{Binding Icon}"/>
-            </Image.Source>
-        </Image>
+                </Image.Source>
+            </Image>
+            </Grid>
 
-    </Grid>
 </ContentView>
