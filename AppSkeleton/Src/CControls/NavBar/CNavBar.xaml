@@ -17,40 +17,39 @@ xmlns:acrylic="clr-namespace:Xe.AcrylicView;assembly=Xe.AcrylicView"
                 TintColor="#20ffffff" 
             BorderColor="#40ffffff"
                 TintOpacity=".5"  
-                CornerRadius="30">
+                CornerRadius="30"/>
 
 
-            <FlexLayout
+        <FlexLayout
                 x:Name="NavBarFlexLayout"
                 BindableLayout.ItemsSource="{Binding CNavIconItems}"
                 HorizontalOptions="Center"
                 Direction="Row"
                 JustifyContent="SpaceAround">
 
-                <BindableLayout.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Padding="3">
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.LoadPageCommand}" CommandParameter="{Binding .}" />
-                            </Grid.GestureRecognizers>
-                            <Border StrokeThickness="0" Padding="10">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="30"/>
-                                </Border.StrokeShape>
-                                <Image WidthRequest="30" HeightRequest="30" x:Name="Image">
-                                    <Image.Source>
-                                        <FontImageSource
+            <BindableLayout.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="3">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.LoadPageCommand}" CommandParameter="{Binding .}" />
+                        </Grid.GestureRecognizers>
+                        <Border StrokeThickness="0" Padding="10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="30"/>
+                            </Border.StrokeShape>
+                            <Image WidthRequest="30" HeightRequest="30" x:Name="Image">
+                                <Image.Source>
+                                    <FontImageSource
                                         Color="{Binding Color}"  
                                         FontFamily="{Binding FontFamily}"
                                         Glyph="{Binding Glyph}" />
-                                    </Image.Source>
-                                </Image>
-                            </Border>
-                        </Grid>
-                    </DataTemplate>
-                </BindableLayout.ItemTemplate>
-            </FlexLayout>
-        </acrylic:AcrylicView>
+                                </Image.Source>
+                            </Image>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
 
+        </FlexLayout>
     </Grid>
 </ContentView>
