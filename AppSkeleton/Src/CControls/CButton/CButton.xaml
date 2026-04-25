@@ -16,8 +16,8 @@ xmlns:acrylic="clr-namespace:Xe.AcrylicView;assembly=Xe.AcrylicView"
         <acrylic:AcrylicView
                 EffectStyle="Custom"    
                 TintColor="{Binding CButtonBackgroundColor}"
-            BorderColor="{Binding CButtonStroke}"
-                TintOpacity=".15 "  
+                BorderColor="{Binding CButtonStroke}"
+                TintOpacity=".5"  
                 CornerRadius="50"/>
 
                 <Image MinimumHeightRequest="0"

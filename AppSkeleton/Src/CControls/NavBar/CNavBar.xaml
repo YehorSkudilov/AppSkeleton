@@ -16,7 +16,7 @@ xmlns:acrylic="clr-namespace:Xe.AcrylicView;assembly=Xe.AcrylicView"
                 EffectStyle="Custom"    
                 TintColor="#20ffffff" 
             BorderColor="#40ffffff"
-                TintOpacity=".15 "  
+                TintOpacity=".5"  
                 CornerRadius="30">
 
 
