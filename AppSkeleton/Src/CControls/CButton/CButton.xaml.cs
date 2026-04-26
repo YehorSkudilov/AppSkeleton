@@ -119,6 +119,15 @@ public partial class CButton : ContentView
         set => SetValue(ClickedActionProperty, value);
     }
 
+    public static readonly BindableProperty IsBackgroundVisibleProperty =
+BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButton), true);
+
+    public bool IsBackgroundVisible
+    {
+        get => (bool)GetValue(IsBackgroundVisibleProperty);
+        set => SetValue(IsBackgroundVisibleProperty, value);
+    }
+
     public CButton()
     {
         InitializeComponent();

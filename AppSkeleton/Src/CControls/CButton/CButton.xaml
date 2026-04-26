@@ -15,7 +15,7 @@
         <local:AcrylicView
             BorderColor="{Binding CButtonStroke}"
             CornerRadius="50"
-                
+            IsVisible="{Binding IsBackgroundVisible}"
             EffectStyle="Custom"
             TintColor="{Binding CButtonBackgroundColor}"
             TintOpacity=".5" />
