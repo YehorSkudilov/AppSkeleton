@@ -27,16 +27,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="Recources\Fonts\MaterialIcons-Regular.ttf" />
-	  <None Remove="Recources\Fonts\MaterialIconsOutlined-Regular.otf" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <MauiFont Include="Recources\Fonts\MaterialIcons-Regular.ttf" />
-	  <MauiFont Include="Recources\Fonts\MaterialIconsOutlined-Regular.otf" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <Compile Update="Platforms\Android\AcrylicViewHandler.cs">
 	    <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
 	  </Compile>
