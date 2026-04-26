@@ -73,8 +73,8 @@ public class CLineChart : BindableObject, IDrawable
         if (Entries == null || Entries.Count < 2)
             return;
 
-        float paddingTop = 25;
-        float paddingBottom = 65;
+        float paddingTop = 20;
+        float paddingBottom = 20;
         float paddingLeft = 20;
         float paddingRight = 20;
 

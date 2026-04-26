@@ -12,10 +12,10 @@
         </Grid.GestureRecognizers>
 
 
-
         <local:AcrylicView
             BorderColor="{Binding CButtonStroke}"
             CornerRadius="50"
+                
             EffectStyle="Custom"
             TintColor="{Binding CButtonBackgroundColor}"
             TintOpacity=".5" />
