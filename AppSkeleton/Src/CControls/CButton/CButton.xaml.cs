@@ -110,14 +110,9 @@ public partial class CButton : ContentView
     }
 
     // ---------------- ACTION (NEW) ----------------
-    public static readonly BindableProperty ClickedActionProperty =
-    BindableProperty.Create(nameof(ClickedAction), typeof(Action), typeof(CButton));
+    public event EventHandler? Clicked;
 
-    public Action? ClickedAction
-    {
-        get => (Action?)GetValue(ClickedActionProperty);
-        set => SetValue(ClickedActionProperty, value);
-    }
+
 
     public static readonly BindableProperty IsBackgroundVisibleProperty =
 BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButton), true);
@@ -137,7 +132,7 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     // ---------------- TAP HANDLER ----------------
     private void OnTapped(object sender, TappedEventArgs e)
     {
-        ClickedAction?.Invoke();
+        Clicked?.Invoke(this, EventArgs.Empty);
         Select(true);
     }
 
