@@ -2,6 +2,29 @@ namespace AppSkeleton;
 
 public partial class CButton : ContentView
 {
+    public static readonly BindableProperty TextProperty =
+        BindableProperty.Create(nameof(Text), typeof(string), typeof(CButton));
+
+
+    public string Text
+    {
+        get => (string)GetValue(TextProperty);
+        set => SetValue(TextProperty, value);
+    }
+
+    public static readonly BindableProperty CornerRadiusProperty =
+    BindableProperty.Create(
+        nameof(CornerRadius),
+        typeof(float),
+        typeof(CButton),
+        50f);
+
+    public float CornerRadius
+    {
+        get => (float)GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
+    }
+
     // ---------------- ICON ----------------
     public static readonly BindableProperty IconProperty =
         BindableProperty.Create(nameof(Icon), typeof(string), typeof(CButton));

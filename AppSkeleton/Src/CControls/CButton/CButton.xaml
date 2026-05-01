@@ -14,25 +14,28 @@
 
         <local:AcrylicView
             BorderColor="{Binding CButtonStroke}"
-            CornerRadius="50"
-            IsVisible="{Binding IsBackgroundVisible}"
+            CornerRadius="{Binding CornerRadius}"
             EffectStyle="Custom"
+            IsVisible="{Binding IsBackgroundVisible}"
             TintColor="{Binding CButtonBackgroundColor}"
             TintOpacity=".5" />
 
-        <Image
-            Margin="{Binding IconPadding}"
-            HeightRequest="{Binding IconHeightRequest}"
-            MinimumHeightRequest="0"
-            MinimumWidthRequest="0"
-            WidthRequest="{Binding IconWidthRequest}">
-            <Image.Source>
-                <FontImageSource
-                    FontFamily="{Binding CurrentFontFamily}"
-                    Glyph="{Binding Icon}"
-                    Size="100" />
-            </Image.Source>
-        </Image>
+        <Grid VerticalOptions="Center" HorizontalOptions="Center">
+            <Label Text="{Binding Text}"/>
+            <Image
+                Margin="{Binding IconPadding}"
+                HeightRequest="{Binding IconHeightRequest}"
+                MinimumHeightRequest="0"
+                MinimumWidthRequest="0"
+                WidthRequest="{Binding IconWidthRequest}">
+                <Image.Source>
+                    <FontImageSource
+                        FontFamily="{Binding CurrentFontFamily}"
+                        Glyph="{Binding Icon}"
+                        Size="100" />
+                </Image.Source>
+            </Image>
+        </Grid>
     </Grid>
 
 </ContentView>
