@@ -1,25 +1,27 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:AppSkeleton"
+<ContentView
+    x:Class="AppSkeleton.CNavBar"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:AppSkeleton">
 
-             x:Class="AppSkeleton.CNavBar">
-
-    <Grid Padding="-5,0" x:Name="MainGrid" Grid.Row="2" HorizontalOptions="Center">
+    <Grid
+        x:Name="MainGrid"
+        Grid.Row="2"
+        HorizontalOptions="Center">
 
         <local:AcrylicView
-                EffectStyle="Custom"    
-                TintColor="#20ffffff" 
+                EffectStyle="Custom"
+                TintColor="#20ffffff"
             BorderColor="#40ffffff"
-                TintOpacity=".5"  
+                TintOpacity=".5"
                 CornerRadius="30">
 
-
-            <FlexLayout
+        <FlexLayout
                 x:Name="NavBarFlexLayout"
                 BindableLayout.ItemsSource="{Binding CNavIconItems}"
-                HorizontalOptions="Center"
                 Direction="Row"
+                HorizontalOptions="Center"
                 JustifyContent="SpaceAround">
 
                 <BindableLayout.ItemTemplate>
@@ -28,16 +30,19 @@
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.LoadPageCommand}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-                            <Border StrokeThickness="0" Padding="10">
+                            <Border Padding="10" StrokeThickness="0">
                                 <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="30"/>
+                                    <RoundRectangle CornerRadius="30" />
                                 </Border.StrokeShape>
-                                <Image WidthRequest="30" HeightRequest="30" x:Name="Image">
+                                <Image
+                                    x:Name="Image"
+                                    HeightRequest="30"
+                                    WidthRequest="30">
                                     <Image.Source>
                                         <FontImageSource
-                                        Color="{Binding Color}"  
-                                        FontFamily="{Binding FontFamily}"
-                                        Glyph="{Binding Glyph}" />
+                                            FontFamily="{Binding FontFamily}"
+                                            Glyph="{Binding Glyph}"
+                                            Color="{Binding Color}" />
                                     </Image.Source>
                                 </Image>
                             </Border>
@@ -46,6 +51,7 @@
                 </BindableLayout.ItemTemplate>
 
             </FlexLayout>
+
         </local:AcrylicView>
     </Grid>
 </ContentView>
