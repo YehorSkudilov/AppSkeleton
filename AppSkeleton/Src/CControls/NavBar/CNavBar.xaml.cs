@@ -49,12 +49,27 @@ public partial class CNavBar : ContentView
         get => (string)GetValue(SelectedFontFamilyProperty);
         set => SetValue(SelectedFontFamilyProperty, value);
     }
-    public ICommand LoadPageCommand { get; set; }
+
+
+    public static readonly BindableProperty LoadPageCommandProperty =
+        BindableProperty.Create(
+            nameof(LoadPageCommand),
+            typeof(Command<CNavItem>),
+            typeof(CNavBar),
+            default(Command<CNavItem>));
+
+    public Command<CNavItem> LoadPageCommand
+    {
+        get => (Command<CNavItem>)GetValue(LoadPageCommandProperty);
+        set => SetValue(LoadPageCommandProperty, value);
+    }
+
+    public Command<CNavItem> SelectPageCommand { get; set; }
 
     public CNavBar()
     {
         InitializeComponent();
-        LoadPageCommand = new Command<CNavItem>(SelectItem);
+        SelectPageCommand = new Command<CNavItem>(SelectItem);
         MainGrid.BindingContext = this;
     }
 
@@ -121,7 +136,6 @@ public partial class CNavBar : ContentView
 
         selectedNavItem.IsSelected = true;
         selectedNavItem.FontFamily = SelectedFontFamily;
-
-        selectedNavItem.Action?.Invoke();
+        LoadPageCommand.Execute(selectedNavItem);
     }
 }

@@ -28,7 +28,7 @@
                     <DataTemplate>
                         <Grid Padding="3">
                             <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.LoadPageCommand}" CommandParameter="{Binding .}" />
+                                <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.SelectPageCommand}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
                             <Border Padding="10" StrokeThickness="0">
                                 <Border.StrokeShape>
