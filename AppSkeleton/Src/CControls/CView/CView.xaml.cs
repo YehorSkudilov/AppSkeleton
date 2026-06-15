@@ -59,47 +59,86 @@ public partial class CView : ContentView
 
         try
         {
+            int startIndex = CNavIconItems.IndexOf(currentCNavItem);
+            int targetIndex = CNavIconItems.IndexOf(target);
+
+            if (startIndex < 0 || targetIndex < 0)
+                return;
+
+            int totalSteps = Math.Abs(targetIndex - startIndex);
+
+            if (totalSteps == 0)
+                return;
+
+            bool isFirstStep = true;
+
+            // Total animation time stays equal to animSpeed
+            uint stepDuration = (uint)Math.Max(1, animSpeed / totalSteps);
+
             while (currentCNavItem != target)
             {
                 int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
-                int targetIndex = CNavIconItems.IndexOf(target);
-
-                if (currentIndex < 0 || targetIndex < 0)
-                    return;
 
                 int direction = Math.Sign(targetIndex - currentIndex);
-
                 int nextIndex = currentIndex + direction;
 
                 if (nextIndex < 0 || nextIndex >= CNavIconItems.Count)
                     return;
+
+                bool isLastStep = nextIndex == targetIndex;
+
+                Easing easing;
+
+                if (isFirstStep && isLastStep)
+                {
+                    easing = Easing.CubicInOut;
+                }
+                else if (isFirstStep)
+                {
+                    easing = Easing.CubicIn;
+                }
+                else if (isLastStep)
+                {
+                    easing = Easing.CubicOut;
+                }
+                else
+                {
+                    easing = Easing.Linear;
+                }
 
                 var nextItem = CNavIconItems[nextIndex];
 
                 var currentView = currentCNavItem.Content;
                 var nextView = nextItem.Content;
 
-                // IMPORTANT: avoid WinUI parent conflict
                 EnsureDetached(nextView);
 
                 double width = MainGrid.Width;
                 if (width <= 0)
-                    width = 300; // fallback safe value
+                    width = 300;
 
                 nextView.TranslationX = direction * width;
 
                 MainGrid.Children.Add(nextView);
 
-                uint duration = (uint)(animSpeed);
+                var currentAnim = currentView.TranslateTo(
+                    -direction * width,
+                    0,
+                    stepDuration,
+                    easing);
 
-                var currentAnim = currentView.TranslateTo(-direction * width, 0, duration);
-                var nextAnim = nextView.TranslateTo(0, 0, duration);
+                var nextAnim = nextView.TranslateTo(
+                    0,
+                    0,
+                    stepDuration,
+                    easing);
 
                 await Task.WhenAll(currentAnim, nextAnim);
 
                 MainGrid.Children.Remove(currentView);
 
                 currentCNavItem = nextItem;
+                isFirstStep = false;
             }
         }
         finally
