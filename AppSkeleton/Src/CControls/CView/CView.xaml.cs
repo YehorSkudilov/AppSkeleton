@@ -33,7 +33,7 @@ public partial class CView : ContentView
         if (_isAnimating)
             return;
 
-        if (currentCNavItem == null)
+        if (currentCNavItem == null || !CNavIconItems.Contains(currentCNavItem) || !CNavIconItems.Contains(target))
         {
             currentCNavItem = target;
 
@@ -43,11 +43,14 @@ public partial class CView : ContentView
 
             return;
         }
+        else
+        {
+            if (currentCNavItem == target)
+                return;
 
-        if (currentCNavItem == target)
-            return;
+            await CarouselTo(target);
+        }
 
-        await CarouselTo(target);
     }
 
     private async Task CarouselTo(CNavItem target)
