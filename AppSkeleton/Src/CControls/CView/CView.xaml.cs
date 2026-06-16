@@ -6,7 +6,7 @@ namespace AppSkeleton;
 public partial class CView : ContentView
 {
     private CNavItem currentCNavItem;
-    private bool _isAnimating;
+    public bool IsNavigating { private set; get; }
 
     public static readonly BindableProperty CNavIconItemsProperty =
         BindableProperty.Create(
@@ -30,7 +30,7 @@ public partial class CView : ContentView
 
     public async void SetContent(CNavItem target)
     {
-        if (_isAnimating)
+        if (IsNavigating)
             return;
 
         if (currentCNavItem == null || !CNavIconItems.Contains(currentCNavItem) || !CNavIconItems.Contains(target))
@@ -55,10 +55,10 @@ public partial class CView : ContentView
 
     private async Task CarouselTo(CNavItem target)
     {
-        if (_isAnimating)
+        if (IsNavigating)
             return;
 
-        _isAnimating = true;
+        IsNavigating = true;
 
         try
         {
@@ -146,7 +146,7 @@ public partial class CView : ContentView
         }
         finally
         {
-            _isAnimating = false;
+            IsNavigating = false;
         }
     }
 
