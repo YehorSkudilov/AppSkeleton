@@ -6,7 +6,18 @@ namespace AppSkeleton;
 public partial class CView : ContentView
 {
     private CNavItem currentCNavItem;
-    public bool IsNavigating { private set; get; }
+    public static readonly BindableProperty IsNavigatingProperty =
+    BindableProperty.Create(
+        nameof(IsNavigating),
+        typeof(bool),
+        typeof(CView),
+        false);
+
+    public bool IsNavigating
+    {
+        get => (bool)GetValue(IsNavigatingProperty);
+        private set => SetValue(IsNavigatingProperty, value);
+    }
 
     public static readonly BindableProperty CNavIconItemsProperty =
         BindableProperty.Create(

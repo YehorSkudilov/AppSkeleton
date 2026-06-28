@@ -44,6 +44,19 @@ public partial class CNavBar : ContentView
         set => SetValue(FontFamilyProperty, value);
     }
 
+    public static readonly BindableProperty IsNavigatingProperty =
+        BindableProperty.Create(
+            nameof(IsNavigating),
+            typeof(bool),
+            typeof(CNavBar),
+            default(bool));
+
+    public bool IsNavigating
+    {
+        get => (bool)GetValue(IsNavigatingProperty);
+        set => SetValue(IsNavigatingProperty, value);
+    }
+
     public string SelectedFontFamily
     {
         get => (string)GetValue(SelectedFontFamilyProperty);
@@ -120,7 +133,8 @@ public partial class CNavBar : ContentView
 
     public void SelectItem(CNavItem selectedNavItem)
     {
-
+        if (IsNavigating)
+            return;
 
         foreach (var navItem in CNavIconItems)
         {
