@@ -195,33 +195,42 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     // is why it's smooth/never laggy: the OS renders it, not MAUI).
     private void ApplyAndroidRipple()
     {
-        if (MainGrid.Handler?.PlatformView is not Android.Views.View nativeView)
-            return;
+        try
+        {
+            if (MainGrid.Handler?.PlatformView is not Android.Views.View nativeView)
+                return;
 
-        var context = nativeView.Context;
-        if (context == null)
-            return;
+            var context = nativeView.Context;
+            if (context == null)
+                return;
 
-        var outValue = new Android.Util.TypedValue();
-        var resolved = context.Theme.ResolveAttribute(
-            Android.Resource.Attribute.SelectableItemBackground, outValue, true);
+            var outValue = new Android.Util.TypedValue();
+            var resolved = context.Theme.ResolveAttribute(
+                Android.Resource.Attribute.SelectableItemBackground, outValue, true);
 
-        // Theme attribute resolution can silently fail depending on the active theme -
-        // fall back to a manually-built ripple so there's always something to see.
-        nativeView.Foreground = resolved
-            ? context.GetDrawable(outValue.ResourceId)
-            : new Android.Graphics.Drawables.RippleDrawable(
-                Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Argb(80, 255, 255, 255)),
-                null, null);
+            // Theme attribute resolution can silently fail depending on the active theme -
+            // fall back to a manually-built ripple so there's always something to see.
+            nativeView.Foreground = resolved
+                ? context.GetDrawable(outValue.ResourceId)
+                : new Android.Graphics.Drawables.RippleDrawable(
+                    Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Argb(80, 255, 255, 255)),
+                    null, null);
 
-        nativeView.Clickable = true;
+            nativeView.Clickable = true;
 
-        // Without this, the ripple draws to the view's full rectangular bounds,
-        // ignoring the rounded shape AcrylicView paints for the background - corners
-        // of the ripple would visibly poke out past the button's rounded edge.
-        var radiusPx = CornerRadius * context.Resources.DisplayMetrics.Density;
-        nativeView.OutlineProvider = new RoundedOutlineProvider(radiusPx);
-        nativeView.ClipToOutline = true;
+            // Without this, the ripple draws to the view's full rectangular bounds,
+            // ignoring the rounded shape AcrylicView paints for the background - corners
+            // of the ripple would visibly poke out past the button's rounded edge.
+            var radiusPx = CornerRadius * context.Resources.DisplayMetrics.Density;
+            nativeView.OutlineProvider = new RoundedOutlineProvider(radiusPx);
+            nativeView.ClipToOutline = true;
+        }
+        catch (Exception ex)
+        {
+            // Best-effort native styling - a failure here should never take the app
+            // down, it should just fall back to no ripple.
+            System.Diagnostics.Debug.WriteLine($"CButton.ApplyAndroidRipple failed: {ex}");
+        }
     }
 
     private class RoundedOutlineProvider : Android.Views.ViewOutlineProvider
@@ -230,8 +239,16 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
 
         public RoundedOutlineProvider(float radiusPx) => this.radiusPx = radiusPx;
 
-        public override void GetOutline(Android.Views.View view, Android.Graphics.Outline outline) =>
+        public override void GetOutline(Android.Views.View view, Android.Graphics.Outline outline)
+        {
+            // This is invoked by Android's own rendering pipeline, which can happen
+            // before the view's first layout pass (Width/Height still 0) -
+            // Outline.SetRoundRect throws on a degenerate empty rect.
+            if (view.Width <= 0 || view.Height <= 0)
+                return;
+
             outline.SetRoundRect(0, 0, view.Width, view.Height, radiusPx);
+        }
     }
 
     // RippleDrawable only animates in response to the View's Pressed state changing.
@@ -241,12 +258,19 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     // firing reliably (OnTapped).
     private async Task AnimateAndroidRippleAsync()
     {
-        if (MainGrid.Handler?.PlatformView is not Android.Views.View nativeView)
-            return;
+        try
+        {
+            if (MainGrid.Handler?.PlatformView is not Android.Views.View nativeView)
+                return;
 
-        nativeView.Pressed = true;
-        await Task.Delay(120);
-        nativeView.Pressed = false;
+            nativeView.Pressed = true;
+            await Task.Delay(120);
+            nativeView.Pressed = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CButton.AnimateAndroidRippleAsync failed: {ex}");
+        }
     }
 #endif
 

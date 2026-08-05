@@ -49,6 +49,14 @@ public partial class CView : ContentView
             currentCNavItem = target;
 
             EnsureDetached(currentCNavItem.Content);
+
+            // CarouselTo leaves the outgoing view translated off-screen when it removes
+            // it (see the TranslateTo calls below) - if that same view later comes back
+            // through this instant-swap path instead of another carousel, it'd still
+            // carry that stale offset and render invisible. Reset it explicitly.
+            currentCNavItem.Content.TranslationX = 0;
+            currentCNavItem.Content.TranslationY = 0;
+
             MainGrid.Children.Clear();
             MainGrid.Add(currentCNavItem.Content);
 
