@@ -150,6 +150,12 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     {
         InitializeComponent();
         MainGrid.BindingContext = this;
+
+#if ANDROID
+        // HandlerChanged (not MainGrid_Loaded) is the reliable "native view now exists"
+        // hook - Loaded isn't guaranteed to fire for elements inside a ContentView.
+        MainGrid.HandlerChanged += (_, _) => ApplyAndroidRipple();
+#endif
     }
 
     // ---------------- TAP HANDLER ----------------
@@ -157,6 +163,10 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     {
         Clicked?.Invoke(this, EventArgs.Empty);
         Select(true);
+
+#if ANDROID
+        _ = AnimateAndroidRippleAsync();
+#endif
     }
 
     public void Select(bool select)
@@ -177,8 +187,68 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     private void MainGrid_Loaded(object sender, EventArgs e)
     {
         CurrentFontFamily = IconFontFamily;
-
     }
+
+#if ANDROID
+    // Gives MainGrid the same native Material ripple every regular Android button has -
+    // a real platform-drawn wave from the touch point, not a hand-rolled animation (which
+    // is why it's smooth/never laggy: the OS renders it, not MAUI).
+    private void ApplyAndroidRipple()
+    {
+        if (MainGrid.Handler?.PlatformView is not Android.Views.View nativeView)
+            return;
+
+        var context = nativeView.Context;
+        if (context == null)
+            return;
+
+        var outValue = new Android.Util.TypedValue();
+        var resolved = context.Theme.ResolveAttribute(
+            Android.Resource.Attribute.SelectableItemBackground, outValue, true);
+
+        // Theme attribute resolution can silently fail depending on the active theme -
+        // fall back to a manually-built ripple so there's always something to see.
+        nativeView.Foreground = resolved
+            ? context.GetDrawable(outValue.ResourceId)
+            : new Android.Graphics.Drawables.RippleDrawable(
+                Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Argb(80, 255, 255, 255)),
+                null, null);
+
+        nativeView.Clickable = true;
+
+        // Without this, the ripple draws to the view's full rectangular bounds,
+        // ignoring the rounded shape AcrylicView paints for the background - corners
+        // of the ripple would visibly poke out past the button's rounded edge.
+        var radiusPx = CornerRadius * context.Resources.DisplayMetrics.Density;
+        nativeView.OutlineProvider = new RoundedOutlineProvider(radiusPx);
+        nativeView.ClipToOutline = true;
+    }
+
+    private class RoundedOutlineProvider : Android.Views.ViewOutlineProvider
+    {
+        private readonly float radiusPx;
+
+        public RoundedOutlineProvider(float radiusPx) => this.radiusPx = radiusPx;
+
+        public override void GetOutline(Android.Views.View view, Android.Graphics.Outline outline) =>
+            outline.SetRoundRect(0, 0, view.Width, view.Height, radiusPx);
+    }
+
+    // RippleDrawable only animates in response to the View's Pressed state changing.
+    // MAUI's TapGestureRecognizer owns the native touch listener, which appears to
+    // swallow the touch stream before Android's own click machinery ever sets that
+    // state - so it's driven manually here instead, from the gesture that's already
+    // firing reliably (OnTapped).
+    private async Task AnimateAndroidRippleAsync()
+    {
+        if (MainGrid.Handler?.PlatformView is not Android.Views.View nativeView)
+            return;
+
+        nativeView.Pressed = true;
+        await Task.Delay(120);
+        nativeView.Pressed = false;
+    }
+#endif
 
     private static void OnFontFamilyChanged(BindableObject bindable, object oldValue, object newValue)
     {

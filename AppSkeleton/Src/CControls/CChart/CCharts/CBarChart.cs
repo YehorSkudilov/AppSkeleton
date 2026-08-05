@@ -124,7 +124,7 @@ public class CBarChart : BindableObject, IDrawable
                     HorizontalAlignment.Center);
 
                 // LABEL (below bar with proper gap)
-                canvas.FontColor = Colors.Gray;
+                canvas.FontColor = Colors.White;
 
                 canvas.DrawString(
                     entry.Label,

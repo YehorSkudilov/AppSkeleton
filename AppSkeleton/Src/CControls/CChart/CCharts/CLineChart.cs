@@ -147,7 +147,7 @@ public class CLineChart : BindableObject, IDrawable
         // -------------------------
         float axisY = paddingTop + height;
 
-        canvas.StrokeColor = Colors.Gray;
+        canvas.StrokeColor = Colors.White;
         canvas.StrokeSize = 1;
 
         canvas.DrawLine(
@@ -194,7 +194,7 @@ public class CLineChart : BindableObject, IDrawable
             float labelX = Math.Clamp(p.X, paddingLeft + 10, paddingLeft + width - 10);
             float labelY = axisY + 15;
 
-            canvas.FontColor = Colors.Gray;
+            canvas.FontColor = Colors.White;
 
             canvas.DrawString(
                 entry.Label,

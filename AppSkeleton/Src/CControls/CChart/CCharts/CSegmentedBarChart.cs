@@ -126,7 +126,7 @@ public class CSegmentedBarChart : BindableObject, IDrawable
             {
                 float segmentWidth = (entry.Value / total) * width;
 
-                canvas.FontColor = Colors.Gray;
+                canvas.FontColor = Colors.White;
 
                 canvas.DrawString(
                     entry.Label,
