@@ -16,16 +16,6 @@
             <TapGestureRecognizer Tapped="OnBackgroundTapped" />
         </Grid.GestureRecognizers>
 
-        <!--
-            CARD - anchored top-right like a dropdown from a header filter icon.
-            AcrylicView defaults to VerticalOptions="Fill" (inherited from ContentView),
-            which its custom Android measurement (BorderViewGroup.OnMeasure) turns into
-            "claim the full height offered by the parent" whenever it gets an Exactly
-            measure spec - Fill triggers exactly that. Explicitly non-Fill options here
-            make it size to its actual content instead, same as every other AcrylicView
-            usage in the app (which all put real content directly inside it, never as a
-            content-less background sibling).
-        -->
         <local:AcrylicView
             x:Name="CardAcrylic"
             Margin="16,70,16,0"
@@ -47,8 +37,8 @@
 
                 <Grid ColumnDefinitions="*,auto, *">
                     <Label
-                        Grid.Column="1"
                         x:Name="TitleLabel"
+                        Grid.Column="1"
                         FontAttributes="Bold"
                         FontSize="16"
                         TextColor="White"
@@ -56,11 +46,11 @@
 
                     <local:CButton
                         Grid.Column="2"
-                        HorizontalOptions="End"
                         CButtonBackgroundColor="Transparent"
                         CButtonStroke="Transparent"
                         Clicked="OnCloseClicked"
                         HeightRequest="24"
+                        HorizontalOptions="End"
                         Icon="close"
                         IconFontFamily="OutlinedIcons"
                         IconHeightRequest="20"
@@ -68,7 +58,10 @@
                         WidthRequest="24" />
                 </Grid>
 
-                <BoxView Background="White" HeightRequest="1" Opacity="0.3" />
+                <BoxView
+                    Background="White"
+                    HeightRequest="1"
+                    Opacity="0.3" />
 
                 <!--  CONTENT SLOT - the consumer's FilterContent gets attached here  -->
                 <ContentView x:Name="ContentHost" />
