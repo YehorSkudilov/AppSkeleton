@@ -65,6 +65,28 @@ public partial class CFilterButton : ContentView
         set => SetValue(FilterContentProperty, value);
     }
 
+    // Caps the popup card's size directly - MaximumHeightRequest/WidthRequest are
+    // enforced by MAUI's own cross-platform layout as a hard ceiling on the arranged
+    // size, independent of whatever the native AcrylicView measurement reports, so
+    // this is a reliable way to bound it regardless of that.
+    public static readonly BindableProperty ContentHeightRequestProperty =
+        BindableProperty.Create(nameof(ContentHeightRequest), typeof(double), typeof(CFilterButton), -1.0);
+
+    public double ContentHeightRequest
+    {
+        get => (double)GetValue(ContentHeightRequestProperty);
+        set => SetValue(ContentHeightRequestProperty, value);
+    }
+
+    public static readonly BindableProperty ContentWidthRequestProperty =
+        BindableProperty.Create(nameof(ContentWidthRequest), typeof(double), typeof(CFilterButton), 280.0);
+
+    public double ContentWidthRequest
+    {
+        get => (double)GetValue(ContentWidthRequestProperty);
+        set => SetValue(ContentWidthRequestProperty, value);
+    }
+
     // Raised when the user taps Apply - the consumer reads whatever state its
     // FilterContent controls hold (e.g. bound DatePicker values) and acts on it.
     public event EventHandler? Applied;
@@ -87,7 +109,7 @@ public partial class CFilterButton : ContentView
         if (navigation == null || FilterContent == null)
             return;
 
-        var modal = new CFilterModalPage(Title, FilterContent)
+        var modal = new CFilterModalPage(Title, FilterContent, ContentHeightRequest, ContentWidthRequest)
         {
             // FilterContent gets reparented onto this new, otherwise-unrelated page,
             // which would leave its {Binding ...} expressions unresolved unless the

@@ -9,12 +9,21 @@ public partial class CFilterModalPage : ContentPage
     public event EventHandler? Cancelled;
     public event EventHandler? Reset;
 
-    public CFilterModalPage(string title, View filterContent)
+    public CFilterModalPage(string title, View filterContent, double contentHeightRequest, double contentWidthRequest)
     {
         InitializeComponent();
 
         TitleLabel.Text = title;
         ContentHost.Content = filterContent;
+
+        CardAcrylic.WidthRequest = contentWidthRequest;
+
+        // -1 (CFilterButton.ContentHeightRequest's default) means "no cap". Maximum*Request
+        // is enforced by MAUI's own cross-platform layout as a hard ceiling on the final
+        // arranged size, independent of whatever the native AcrylicView measurement
+        // reports - a reliable way to bound this regardless of that.
+        if (contentHeightRequest > 0)
+            CardAcrylic.MaximumHeightRequest = contentHeightRequest;
 
         // Anchored at the same top-right corner the card docks to, so scaling in/out
         // from there reads as "grows out of / shrinks back into" the header icon that

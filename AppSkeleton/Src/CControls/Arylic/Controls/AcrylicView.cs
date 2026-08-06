@@ -87,15 +87,18 @@ public partial class AcrylicView : ContentView, IAcrylicView
     {
         base.OnPropertyChanged(propertyName);
 
+        // Previously gated behind "WidthRequest > 0 AND HeightRequest > 0" and only
+        // watched WidthRequest/HeightRequest - meant setting e.g. MaximumHeightRequest
+        // alone (CFilterModalPage does exactly this) never triggered a re-measure, so
+        // the native view kept its old size no matter what the XAML/code changed it to.
         if (propertyName == WidthRequestProperty.PropertyName ||
-            propertyName == HeightRequestProperty.PropertyName)
+            propertyName == HeightRequestProperty.PropertyName ||
+            propertyName == MinimumWidthRequestProperty.PropertyName ||
+            propertyName == MinimumHeightRequestProperty.PropertyName ||
+            propertyName == MaximumWidthRequestProperty.PropertyName ||
+            propertyName == MaximumHeightRequestProperty.PropertyName)
         {
-            // Ensure we have valid dimensions before triggering any native rendering
-            if (WidthRequest > 0 && HeightRequest > 0)
-            {
-                // Trigger re-render only when BOTH are valid
-                InvalidateMeasure();
-            }
+            InvalidateMeasure();
         }
     }
 }
