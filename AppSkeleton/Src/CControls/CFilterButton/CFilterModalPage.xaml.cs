@@ -15,29 +15,48 @@ public partial class CFilterModalPage : ContentPage
 
         TitleLabel.Text = title;
         ContentHost.Content = filterContent;
+
+        // Anchored at the same top-right corner the card docks to, so scaling in/out
+        // from there reads as "grows out of / shrinks back into" the header icon that
+        // opened it, rather than an unrelated modal sheet animation.
+        Card.AnchorX = 1;
+        Card.AnchorY = 0;
+        Card.Scale = 0.1;
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        await Card.ScaleTo(1, 200, Easing.CubicOut);
+    }
+
+    private async Task CloseAsync()
+    {
+        await Card.ScaleTo(0.1, 150, Easing.CubicIn);
+        await Navigation.PopModalAsync(animated: false);
     }
 
     private async void OnApplyClicked(object sender, EventArgs e)
     {
-        await Navigation.PopModalAsync();
+        await CloseAsync();
         Applied?.Invoke(this, EventArgs.Empty);
     }
 
     private async void OnResetClicked(object sender, EventArgs e)
     {
-        await Navigation.PopModalAsync();
+        await CloseAsync();
         Reset?.Invoke(this, EventArgs.Empty);
     }
 
-    private async void OnCancelClicked(object sender, EventArgs e)
+    private async void OnCloseClicked(object sender, EventArgs e)
     {
-        await Navigation.PopModalAsync();
+        await CloseAsync();
         Cancelled?.Invoke(this, EventArgs.Empty);
     }
 
     private async void OnBackgroundTapped(object sender, EventArgs e)
     {
-        await Navigation.PopModalAsync();
+        await CloseAsync();
         Cancelled?.Invoke(this, EventArgs.Empty);
     }
 }

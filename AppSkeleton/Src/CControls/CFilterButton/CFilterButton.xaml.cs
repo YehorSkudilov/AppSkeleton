@@ -24,8 +24,13 @@ public partial class CFilterButton : ContentView
         set => SetValue(IconFontFamilyProperty, value);
     }
 
+    // -1 is MAUI's "no explicit size requested" sentinel (the same default View.HeightRequest/
+    // WidthRequest already use) - left unset, CButton's icon Image sizes itself to fill
+    // whatever space CFilterButton itself is given, rather than being pinned to a fixed
+    // pixel size that wouldn't suit every page this is dropped into. Still fully
+    // overridable by a consumer that wants a specific size.
     public static readonly BindableProperty IconHeightRequestProperty =
-        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CFilterButton), 10.0);
+        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CFilterButton), -1.0);
 
     public double IconHeightRequest
     {
@@ -34,7 +39,7 @@ public partial class CFilterButton : ContentView
     }
 
     public static readonly BindableProperty IconWidthRequestProperty =
-        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CFilterButton), 10.0);
+        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CFilterButton), -1.0);
 
     public double IconWidthRequest
     {
@@ -94,6 +99,8 @@ public partial class CFilterButton : ContentView
         modal.Cancelled += (_, _) => Cancelled?.Invoke(this, EventArgs.Empty);
         modal.Reset += (_, _) => Reset?.Invoke(this, EventArgs.Empty);
 
-        await navigation.PushModalAsync(modal);
+        // animated: false - the modal page runs its own grow/shrink animation
+        // (see CFilterModalPage), so the platform's own push transition is skipped.
+        await navigation.PushModalAsync(modal, animated: false);
     }
 }

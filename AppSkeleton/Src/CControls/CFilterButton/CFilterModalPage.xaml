@@ -14,32 +14,52 @@
             <TapGestureRecognizer Tapped="OnBackgroundTapped" />
         </Grid.GestureRecognizers>
 
-        <!--  CARD - anchored top-right like a dropdown from a header filter icon  -->
-        <local:AcrylicView
+        <!--  CARD - anchored top-right like a dropdown from a header filter icon.
+              This outer Grid is sized by its content (the VerticalStackLayout below),
+              not by the AcrylicView, which is why the acrylic is a same-cell background
+              sibling rather than the sizing container - see BankListView for the same
+              "Border/blur behind, real content in front, both in one auto-sized cell" trick.  -->
+        <Grid
+            x:Name="Card"
             Margin="16,70,16,0"
-            Padding="16"
-            BorderColor="#40ffffff"
-            CornerRadius="25"
-            EffectStyle="Custom"
             HorizontalOptions="End"
-            TintColor="#20ffffff"
-            TintOpacity=".5"
             VerticalOptions="Start"
             WidthRequest="280">
 
+            <local:AcrylicView
+                BorderColor="#40ffffff"
+                CornerRadius="25"
+                EffectStyle="Custom"
+                TintColor="#20ffffff"
+                TintOpacity=".5" />
+
             <!--  Swallow taps so tapping the card itself doesn't fall through to the backdrop  -->
-            <local:AcrylicView.GestureRecognizers>
+            <Grid.GestureRecognizers>
                 <TapGestureRecognizer />
-            </local:AcrylicView.GestureRecognizers>
+            </Grid.GestureRecognizers>
 
-            <VerticalStackLayout Spacing="15">
+            <VerticalStackLayout Padding="16" Spacing="15">
 
-                <Label
-                    x:Name="TitleLabel"
-                    FontAttributes="Bold"
-                    FontSize="16"
-                    HorizontalOptions="Center"
-                    TextColor="White" />
+                <Grid ColumnDefinitions="*,auto">
+                    <Label
+                        FontAttributes="Bold"
+                        FontSize="16"
+                        x:Name="TitleLabel"
+                        TextColor="White"
+                        VerticalOptions="Center" />
+
+                    <local:CButton
+                        Grid.Column="1"
+                        Clicked="OnCloseClicked"
+                        CButtonBackgroundColor="Transparent"
+                        CButtonStroke="Transparent"
+                        HeightRequest="24"
+                        Icon="close"
+                        IconFontFamily="OutlinedIcons"
+                        IconHeightRequest="16"
+                        IconWidthRequest="16"
+                        WidthRequest="24" />
+                </Grid>
 
                 <BoxView Background="White" HeightRequest="1" Opacity="0.3" />
 
@@ -52,23 +72,14 @@
                     Text="Reset"
                     TextColor="White" />
 
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                    <Button
-                        BackgroundColor="#30ffffff"
-                        Clicked="OnCancelClicked"
-                        Text="Cancel"
-                        TextColor="White" />
-
-                    <Button
-                        Grid.Column="1"
-                        BackgroundColor="#4cd0f2"
-                        Clicked="OnApplyClicked"
-                        Text="Apply"
-                        TextColor="Black" />
-                </Grid>
+                <Button
+                    BackgroundColor="#4cd0f2"
+                    Clicked="OnApplyClicked"
+                    Text="Apply"
+                    TextColor="Black" />
 
             </VerticalStackLayout>
-        </local:AcrylicView>
+        </Grid>
 
     </Grid>
 
