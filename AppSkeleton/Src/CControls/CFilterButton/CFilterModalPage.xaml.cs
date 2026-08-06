@@ -7,6 +7,7 @@ public partial class CFilterModalPage : ContentPage
 {
     public event EventHandler? Applied;
     public event EventHandler? Cancelled;
+    public event EventHandler? Reset;
 
     public CFilterModalPage(string title, View filterContent)
     {
@@ -20,6 +21,12 @@ public partial class CFilterModalPage : ContentPage
     {
         await Navigation.PopModalAsync();
         Applied?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async void OnResetClicked(object sender, EventArgs e)
+    {
+        await Navigation.PopModalAsync();
+        Reset?.Invoke(this, EventArgs.Empty);
     }
 
     private async void OnCancelClicked(object sender, EventArgs e)

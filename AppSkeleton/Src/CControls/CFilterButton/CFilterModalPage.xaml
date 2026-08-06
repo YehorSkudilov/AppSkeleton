@@ -3,43 +3,54 @@
     x:Class="AppSkeleton.CFilterModalPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    BackgroundColor="#B0000000">
+    xmlns:local="clr-namespace:AppSkeleton"
+    BackgroundColor="Transparent">
 
     <Grid>
 
-        <!--  BACKDROP - tapping outside the card cancels  -->
+        <!--  No dimmed backdrop - this behaves like a dropdown. Tapping anywhere
+              outside the card still closes it, via this invisible full-page layer.  -->
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnBackgroundTapped" />
         </Grid.GestureRecognizers>
 
-        <!--  CARD  -->
-        <Border
-            Margin="30"
-            Padding="20"
-            BackgroundColor="#1e1e1e"
-            HorizontalOptions="Fill"
-            Stroke="#40ffffff"
-            VerticalOptions="Center">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="20" />
-            </Border.StrokeShape>
+        <!--  CARD - anchored top-right like a dropdown from a header filter icon  -->
+        <local:AcrylicView
+            Margin="16,70,16,0"
+            Padding="16"
+            BorderColor="#40ffffff"
+            CornerRadius="25"
+            EffectStyle="Custom"
+            HorizontalOptions="End"
+            TintColor="#20ffffff"
+            TintOpacity=".5"
+            VerticalOptions="Start"
+            WidthRequest="280">
 
             <!--  Swallow taps so tapping the card itself doesn't fall through to the backdrop  -->
-            <Border.GestureRecognizers>
+            <local:AcrylicView.GestureRecognizers>
                 <TapGestureRecognizer />
-            </Border.GestureRecognizers>
+            </local:AcrylicView.GestureRecognizers>
 
             <VerticalStackLayout Spacing="15">
 
                 <Label
                     x:Name="TitleLabel"
                     FontAttributes="Bold"
-                    FontSize="18"
+                    FontSize="16"
                     HorizontalOptions="Center"
                     TextColor="White" />
 
+                <BoxView Background="White" HeightRequest="1" Opacity="0.3" />
+
                 <!--  CONTENT SLOT - the consumer's FilterContent gets attached here  -->
                 <ContentView x:Name="ContentHost" />
+
+                <Button
+                    BackgroundColor="#30ffffff"
+                    Clicked="OnResetClicked"
+                    Text="Reset"
+                    TextColor="White" />
 
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                     <Button
@@ -57,7 +68,7 @@
                 </Grid>
 
             </VerticalStackLayout>
-        </Border>
+        </local:AcrylicView>
 
     </Grid>
 

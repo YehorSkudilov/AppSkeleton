@@ -67,6 +67,10 @@ public partial class CFilterButton : ContentView
     // Raised on Cancel or backdrop tap - consumer should discard any pending changes.
     public event EventHandler? Cancelled;
 
+    // Raised when the user taps Reset - consumer should restore its filter state to
+    // defaults (e.g. reset bound DatePicker values) and typically re-apply immediately.
+    public event EventHandler? Reset;
+
     public CFilterButton()
     {
         InitializeComponent();
@@ -88,6 +92,7 @@ public partial class CFilterButton : ContentView
         };
         modal.Applied += (_, _) => Applied?.Invoke(this, EventArgs.Empty);
         modal.Cancelled += (_, _) => Cancelled?.Invoke(this, EventArgs.Empty);
+        modal.Reset += (_, _) => Reset?.Invoke(this, EventArgs.Empty);
 
         await navigation.PushModalAsync(modal);
     }
