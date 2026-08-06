@@ -128,10 +128,8 @@ public class CPieChart : BindableObject, IDrawable
             canvas.FillColor = Color.FromArgb("#30ffffff");
             canvas.FillCircle(x, badgeCenterY, badgeRadius);
 
-            // #40ffffff (25% alpha) at 1px was too faint to read against a colorful
-            // slice - bumped both up so the ring actually shows.
-            canvas.StrokeColor = Color.FromArgb("#80ffffff");
-            canvas.StrokeSize = 2;
+            canvas.StrokeColor = Color.FromArgb("#40ffffff");
+            canvas.StrokeSize = 1;
             canvas.DrawCircle(x, badgeCenterY, badgeRadius);
 
             canvas.FontColor = Colors.White;
