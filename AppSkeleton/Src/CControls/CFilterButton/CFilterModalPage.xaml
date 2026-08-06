@@ -36,8 +36,7 @@
             HorizontalOptions="End"
             TintColor="#20ffffff"
             TintOpacity=".5"
-            VerticalOptions="Start"
-            WidthRequest="280">
+            VerticalOptions="Start">
 
             <!--  Swallow taps so tapping the card itself doesn't fall through to the backdrop  -->
             <local:AcrylicView.GestureRecognizers>
