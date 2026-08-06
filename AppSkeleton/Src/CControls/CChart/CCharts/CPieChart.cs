@@ -119,17 +119,35 @@ public class CPieChart : BindableObject, IDrawable
             float x = centerX + labelRadius * (float)Math.Cos(rad);
             float y = centerY + labelRadius * (float)Math.Sin(rad);
 
+            // Circle badge behind the emoji - same translucent-white icon-badge look
+            // used elsewhere (e.g. BudgetListView's category icon), rather than the
+            // glyph floating bare on the slice.
+            const float badgeRadius = 13f;
+            float badgeCenterY = y - 8f;
+
+            canvas.FillColor = Color.FromArgb("#30ffffff");
+            canvas.FillCircle(x, badgeCenterY, badgeRadius);
+
             canvas.FontColor = Colors.White;
-            canvas.FontSize = 12;
 
             if (!string.IsNullOrEmpty(LabelFontFamily))
                 canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
 
-            canvas.DrawString(
-                $"{entry.Label}\n{entry.Value:0}",
-                x,
-                y,
-                HorizontalAlignment.Center);
+            // The point-based DrawString overload anchors by the text's top, not its
+            // center, so the emoji was landing below the badge rather than inside it -
+            // the rect-based overload with VerticalAlignment.Center actually centers on
+            // both axes.
+            canvas.FontSize = 14;
+            var badgeRect = new RectF(x - badgeRadius, badgeCenterY - badgeRadius, badgeRadius * 2, badgeRadius * 2);
+            canvas.DrawString(entry.Label, badgeRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+
+            // Value sits in its own rect below the badge, with a real gap instead of
+            // being packed against it.
+            const float valueGap = 6f;
+            const float valueHeight = 16f;
+            canvas.FontSize = 12;
+            var valueRect = new RectF(x - 20, badgeCenterY + badgeRadius + valueGap, 40, valueHeight);
+            canvas.DrawString($"{entry.Value:0}", valueRect, HorizontalAlignment.Center, VerticalAlignment.Center);
 
             startAngle += sweep;
         }

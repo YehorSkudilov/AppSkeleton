@@ -63,6 +63,7 @@ public partial class CFilterModalPage : ContentPage
             CardAcrylic.MaximumHeightRequest = contentHeightRequest;
 
         CardAcrylic.Scale = 0.05;
+        CardAcrylic.Opacity = 0;
     }
 
     // Deliberately not gated behind CardAcrylic.SizeChanged - AcrylicView's native
@@ -83,7 +84,9 @@ public partial class CFilterModalPage : ContentPage
         hasAnimatedIn = true;
 
         ApplyAnchor();
-        await CardAcrylic.ScaleTo(1, 200, Easing.CubicOut);
+        await Task.WhenAll(
+            CardAcrylic.ScaleToAsync(1, 200, Easing.CubicOut),
+            CardAcrylic.FadeToAsync(1, 150, Easing.CubicOut));
     }
 
     private void ApplyAnchor()
@@ -115,7 +118,13 @@ public partial class CFilterModalPage : ContentPage
 
     private async Task CloseAsync()
     {
-        await CardAcrylic.ScaleTo(0.05, 150, Easing.CubicIn);
+        // Opacity finishes a touch faster than scale - fading fully out while still
+        // mid-shrink reads as the card dissolving into the trigger button, rather than
+        // a flat scale-down that leaves a tiny fully-opaque dot for a frame.
+        await Task.WhenAll(
+            CardAcrylic.ScaleToAsync(0.05, 150, Easing.CubicIn),
+            CardAcrylic.FadeToAsync(0, 120, Easing.CubicIn));
+
         await Navigation.PopModalAsync(animated: false);
     }
 
