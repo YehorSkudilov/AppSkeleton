@@ -128,6 +128,10 @@ public class CPieChart : BindableObject, IDrawable
             canvas.FillColor = Color.FromArgb("#30ffffff");
             canvas.FillCircle(x, badgeCenterY, badgeRadius);
 
+            canvas.StrokeColor = Color.FromArgb("#40ffffff");
+            canvas.StrokeSize = 1;
+            canvas.DrawCircle(x, badgeCenterY, badgeRadius);
+
             canvas.FontColor = Colors.White;
 
             if (!string.IsNullOrEmpty(LabelFontFamily))
@@ -143,7 +147,7 @@ public class CPieChart : BindableObject, IDrawable
 
             // Value sits in its own rect below the badge, with a real gap instead of
             // being packed against it.
-            const float valueGap = 6f;
+            const float valueGap = 3f;
             const float valueHeight = 16f;
             canvas.FontSize = 12;
             var valueRect = new RectF(x - 20, badgeCenterY + badgeRadius + valueGap, 40, valueHeight);
