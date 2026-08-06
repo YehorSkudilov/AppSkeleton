@@ -93,7 +93,18 @@ public class BorderViewGroup(Context context) : FrameLayout(context)
         {
             return Math.Max(minSize, desiredSize);
         }
-        return constraint;
+
+        // mode == Exactly. Vanilla Android semantics say "the parent already decided
+        // your size, take it" - but MAUI's own cross-platform Grid/StackLayout
+        // arrangement is what actually owns final sizing here, and it very commonly
+        // hands this native view an Exactly spec even when the MAUI-side content
+        // asked to be smaller (e.g. HorizontalOptions/VerticalOptions != Fill,
+        // Grid Auto rows/columns). Blindly returning the full constraint is why
+        // AcrylicView expands to fill its parent regardless of alignment options -
+        // respect the actual measured content size instead, same as AtMost. Content
+        // genuinely meant to fill the space still measures close to `constraint`
+        // here anyway, so this doesn't change anything for that case.
+        return Math.Min(Math.Max(minSize, desiredSize), constraint);
     }
 
     /// <summary>

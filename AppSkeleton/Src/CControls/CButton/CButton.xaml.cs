@@ -146,6 +146,19 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
         set => SetValue(IsBackgroundVisibleProperty, value);
     }
 
+    // AcrylicView's blur/measurement machinery is overkill (and, in some layout
+    // contexts, buggy - see CFilterModalPage) for a plain small icon button. Set this
+    // false to fall back to a flat Border using the same CButtonStroke/
+    // CButtonBackgroundColor colors, no blur.
+    public static readonly BindableProperty UseAcrylicBackgroundProperty =
+        BindableProperty.Create(nameof(UseAcrylicBackground), typeof(bool), typeof(CButton), true);
+
+    public bool UseAcrylicBackground
+    {
+        get => (bool)GetValue(UseAcrylicBackgroundProperty);
+        set => SetValue(UseAcrylicBackgroundProperty, value);
+    }
+
     public CButton()
     {
         InitializeComponent();

@@ -5,20 +5,41 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:AppSkeleton">
 
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <local:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentView.Resources>
+
     <Grid x:Name="MainGrid" Loaded="MainGrid_Loaded">
 
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnTapped" />
         </Grid.GestureRecognizers>
 
+        <Grid IsVisible="{Binding IsBackgroundVisible}">
 
-        <local:AcrylicView
-            BorderColor="{Binding CButtonStroke}"
-            CornerRadius="{Binding CornerRadius}"
-            EffectStyle="Custom"
-            IsVisible="{Binding IsBackgroundVisible}"
-            TintColor="{Binding CButtonBackgroundColor}"
-            TintOpacity=".5" />
+            <local:AcrylicView
+                BorderColor="{Binding CButtonStroke}"
+                CornerRadius="{Binding CornerRadius}"
+                EffectStyle="Custom"
+                IsVisible="{Binding UseAcrylicBackground}"
+                TintColor="{Binding CButtonBackgroundColor}"
+                TintOpacity=".5" />
+
+            <!--  Flat fallback for when the blur/measurement overhead of AcrylicView
+                  isn't wanted (or, in some layout contexts, doesn't behave) - same
+                  stroke/fill colors, no blur.  -->
+            <Border
+                BackgroundColor="{Binding CButtonBackgroundColor}"
+                IsVisible="{Binding UseAcrylicBackground, Converter={StaticResource InverseBoolConverter}}"
+                Stroke="{Binding CButtonStroke}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="{Binding CornerRadius}" />
+                </Border.StrokeShape>
+            </Border>
+
+        </Grid>
 
         <Grid VerticalOptions="Center" HorizontalOptions="Center">
             <Label Text="{Binding Text}"/>

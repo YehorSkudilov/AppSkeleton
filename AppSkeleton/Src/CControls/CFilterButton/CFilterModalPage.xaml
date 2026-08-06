@@ -8,56 +8,64 @@
 
     <Grid>
 
-        <!--  No dimmed backdrop - this behaves like a dropdown. Tapping anywhere
-              outside the card still closes it, via this invisible full-page layer.  -->
+        <!--
+            No dimmed backdrop - this behaves like a dropdown. Tapping anywhere
+            outside the card still closes it, via this invisible full-page layer.
+        -->
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnBackgroundTapped" />
         </Grid.GestureRecognizers>
 
-        <!--  CARD - anchored top-right like a dropdown from a header filter icon.
-              This outer Grid is sized by its content (the VerticalStackLayout below),
-              not by the AcrylicView, which is why the acrylic is a same-cell background
-              sibling rather than the sizing container - see BankListView for the same
-              "Border/blur behind, real content in front, both in one auto-sized cell" trick.  -->
-        <Grid
-            x:Name="Card"
+        <!--
+            CARD - anchored top-right like a dropdown from a header filter icon.
+            AcrylicView defaults to VerticalOptions="Fill" (inherited from ContentView),
+            which its custom Android measurement (BorderViewGroup.OnMeasure) turns into
+            "claim the full height offered by the parent" whenever it gets an Exactly
+            measure spec - Fill triggers exactly that. Explicitly non-Fill options here
+            make it size to its actual content instead, same as every other AcrylicView
+            usage in the app (which all put real content directly inside it, never as a
+            content-less background sibling).
+        -->
+        <local:AcrylicView
+            x:Name="CardAcrylic"
             Margin="16,70,16,0"
+            Padding="16"
+            BorderColor="#40ffffff"
+            CornerRadius="25"
+            EffectStyle="Custom"
             HorizontalOptions="End"
+            TintColor="#20ffffff"
+            TintOpacity=".5"
             VerticalOptions="Start"
             WidthRequest="280">
 
-            <local:AcrylicView
-                BorderColor="#40ffffff"
-                CornerRadius="25"
-                EffectStyle="Custom"
-                TintColor="#20ffffff"
-                TintOpacity=".5" />
-
             <!--  Swallow taps so tapping the card itself doesn't fall through to the backdrop  -->
-            <Grid.GestureRecognizers>
+            <local:AcrylicView.GestureRecognizers>
                 <TapGestureRecognizer />
-            </Grid.GestureRecognizers>
+            </local:AcrylicView.GestureRecognizers>
 
-            <VerticalStackLayout Padding="16" Spacing="15">
+            <VerticalStackLayout Spacing="15">
 
-                <Grid ColumnDefinitions="*,auto">
+                <Grid ColumnDefinitions="*,auto, *">
                     <Label
+                        Grid.Column="1"
+                        x:Name="TitleLabel"
                         FontAttributes="Bold"
                         FontSize="16"
-                        x:Name="TitleLabel"
                         TextColor="White"
                         VerticalOptions="Center" />
 
                     <local:CButton
-                        Grid.Column="1"
-                        Clicked="OnCloseClicked"
+                        Grid.Column="2"
+                        HorizontalOptions="End"
                         CButtonBackgroundColor="Transparent"
                         CButtonStroke="Transparent"
+                        Clicked="OnCloseClicked"
                         HeightRequest="24"
                         Icon="close"
                         IconFontFamily="OutlinedIcons"
-                        IconHeightRequest="16"
-                        IconWidthRequest="16"
+                        IconHeightRequest="20"
+                        UseAcrylicBackground="False"
                         WidthRequest="24" />
                 </Grid>
 
@@ -79,7 +87,7 @@
                     TextColor="Black" />
 
             </VerticalStackLayout>
-        </Grid>
+        </local:AcrylicView>
 
     </Grid>
 

@@ -19,20 +19,20 @@ public partial class CFilterModalPage : ContentPage
         // Anchored at the same top-right corner the card docks to, so scaling in/out
         // from there reads as "grows out of / shrinks back into" the header icon that
         // opened it, rather than an unrelated modal sheet animation.
-        Card.AnchorX = 1;
-        Card.AnchorY = 0;
-        Card.Scale = 0.1;
+        CardAcrylic.AnchorX = 1;
+        CardAcrylic.AnchorY = 0;
+        CardAcrylic.Scale = 0.1;
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await Card.ScaleTo(1, 200, Easing.CubicOut);
+        await CardAcrylic.ScaleTo(1, 200, Easing.CubicOut);
     }
 
     private async Task CloseAsync()
     {
-        await Card.ScaleTo(0.1, 150, Easing.CubicIn);
+        await CardAcrylic.ScaleTo(0.1, 150, Easing.CubicIn);
         await Navigation.PopModalAsync(animated: false);
     }
 
