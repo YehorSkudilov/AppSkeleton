@@ -114,7 +114,12 @@ public partial class CFilterButton : ContentView
 
         var buttonCenter = GetAbsoluteCenter(this);
 
-        var modal = new CFilterModalPage(Title, FilterContent, ContentHeightRequest, ContentWidthRequest, buttonCenter)
+        // Close icon glyph is fixed ("close" isn't something a filter trigger would ever
+        // want to be) but its font/size mirror the trigger button's own so the two read
+        // as the same visual control.
+        var modal = new CFilterModalPage(
+            Title, FilterContent, ContentHeightRequest, ContentWidthRequest, buttonCenter,
+            Icon, IconFontFamily)
         {
             // FilterContent gets reparented onto this new, otherwise-unrelated page,
             // which would leave its {Binding ...} expressions unresolved unless the

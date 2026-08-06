@@ -54,6 +54,16 @@ public partial class CButton : ContentView
         set => SetValue(IconWidthRequestProperty, value);
     }
 
+    // ---------------- ICON COLOR ----------------
+    public static readonly BindableProperty IconColorProperty =
+        BindableProperty.Create(nameof(IconColor), typeof(Color), typeof(CButton), Colors.White);
+
+    public Color IconColor
+    {
+        get => (Color)GetValue(IconColorProperty);
+        set => SetValue(IconColorProperty, value);
+    }
+
     // ---------------- PADDING ----------------
     public static readonly BindableProperty IconPaddingProperty =
         BindableProperty.Create(nameof(IconPadding), typeof(Thickness), typeof(CButton), new Thickness(0));

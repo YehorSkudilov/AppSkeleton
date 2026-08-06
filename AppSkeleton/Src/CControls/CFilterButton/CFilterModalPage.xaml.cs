@@ -5,6 +5,27 @@ namespace AppSkeleton;
 // confined to its parent's layout bounds can't do without extra plumbing.
 public partial class CFilterModalPage : ContentPage
 {
+    // Mirrors CFilterButton's own Icon/IconFontFamily/IconHeightRequest/IconWidthRequest
+    // bindable properties so the close button is customizable the same way the trigger
+    // button is, via CFilterButton.CloseIcon/CloseIconFontFamily/etc.
+    public static readonly BindableProperty IconProperty =
+        BindableProperty.Create(nameof(Icon), typeof(string), typeof(CFilterModalPage), "close");
+
+    public string Icon
+    {
+        get => (string)GetValue(IconProperty);
+        set => SetValue(IconProperty, value);
+    }
+
+    public static readonly BindableProperty IconFontFamilyProperty =
+        BindableProperty.Create(nameof(IconFontFamily), typeof(string), typeof(CFilterModalPage), "OutlinedIcons");
+
+    public string IconFontFamily
+    {
+        get => (string)GetValue(IconFontFamilyProperty);
+        set => SetValue(IconFontFamilyProperty, value);
+    }
+
     public event EventHandler? Applied;
     public event EventHandler? Cancelled;
     public event EventHandler? Reset;
@@ -17,11 +38,17 @@ public partial class CFilterModalPage : ContentPage
         View filterContent,
         double contentHeightRequest,
         double contentWidthRequest,
-        Point buttonCenter)
+        Point buttonCenter,
+        string closeIcon,
+        string closeIconFontFamily)
     {
         InitializeComponent();
 
         this.buttonCenter = buttonCenter;
+
+        Icon = closeIcon;
+        IconFontFamily = closeIconFontFamily;
+
 
         TitleLabel.Text = title;
         ContentHost.Content = filterContent;

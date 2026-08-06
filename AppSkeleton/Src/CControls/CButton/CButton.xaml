@@ -53,6 +53,7 @@
                     <FontImageSource
                         FontFamily="{Binding CurrentFontFamily}"
                         Glyph="{Binding Icon}"
+                        Color="{Binding IconColor}"
                         Size="100" />
                 </Image.Source>
             </Image>
