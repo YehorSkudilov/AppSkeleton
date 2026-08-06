@@ -117,7 +117,7 @@ public partial class CNavBar : ContentView
     {
         base.OnPropertyChanged(propertyName);
 
-        if (propertyName == FontFamilyProperty.PropertyName)
+        if (propertyName == FontFamilyProperty.PropertyName || propertyName == CNavIconItemsProperty.PropertyName)
         {
             ApplyDefaultFont(CNavIconItems);
         }
