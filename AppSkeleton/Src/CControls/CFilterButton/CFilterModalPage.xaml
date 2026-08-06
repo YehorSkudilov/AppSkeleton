@@ -7,7 +7,7 @@
     x:Name="Root"
     BackgroundColor="Transparent">
 
-    <Grid TranslationX="5" TranslationY="-18">
+    <Grid TranslationX="5" TranslationY="-17.5">
 
         <!--
             No dimmed backdrop - this behaves like a dropdown. Tapping anywhere
@@ -17,17 +17,22 @@
             <TapGestureRecognizer Tapped="OnBackgroundTapped" />
         </Grid.GestureRecognizers>
 
-        <Border
+        <local:AcrylicView
             x:Name="CardAcrylic"
             Margin="16,70,16,0"
             Padding="10"
+            BorderColor="#40ffffff"
+            CornerRadius="25"
+            EffectStyle="Custom"
             HorizontalOptions="End"
+            TintColor="#20ffffff"
+            TintOpacity=".5"
             VerticalOptions="Start">
 
             <!--  Swallow taps so tapping the card itself doesn't fall through to the backdrop  -->
-            <Border.GestureRecognizers>
+            <local:AcrylicView.GestureRecognizers>
                 <TapGestureRecognizer />
-            </Border.GestureRecognizers>
+            </local:AcrylicView.GestureRecognizers>
 
             <VerticalStackLayout Spacing="15">
 
@@ -42,15 +47,14 @@
 
                     <local:CButton
                         Grid.Column="2"
-                        Margin="3,0"
                         Clicked="OnCloseClicked"
                         HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Margin="3,0"
                         Icon="{Binding Icon, Source={x:Reference Root}}"
                         IconFontFamily="{Binding IconFontFamily, Source={x:Reference Root}}"
                         IconHeightRequest="20"
-                        VerticalOptions="Center"
-                        IconColor="Black"
-                        WidthRequest="20" />
+                        WidthRequest="20"/>
                 </Grid>
 
                 <BoxView
@@ -74,7 +78,7 @@
                     TextColor="Black" />
 
             </VerticalStackLayout>
-        </Border>
+        </local:AcrylicView>
 
     </Grid>
 
