@@ -151,7 +151,7 @@ public class CPieChart : BindableObject, IDrawable
             const float valueHeight = 16f;
             canvas.FontSize = 12;
             var valueRect = new RectF(x - 20, badgeCenterY + badgeRadius + valueGap, 40, valueHeight);
-            canvas.DrawString($"{entry.Value:0}", valueRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+            canvas.DrawString($"{entry.Value / total * 100:0}%", valueRect, HorizontalAlignment.Center, VerticalAlignment.Center);
 
             startAngle += sweep;
         }

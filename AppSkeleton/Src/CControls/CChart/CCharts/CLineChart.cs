@@ -183,7 +183,7 @@ public class CLineChart : BindableObject, IDrawable
             canvas.FontColor = Colors.White;
 
             canvas.DrawString(
-                entry.Value.ToString("0"),
+                entry.Value.ToString("$#,0;-$#,0;$0"),
                 p.X,
                 valueY,
                 HorizontalAlignment.Center);

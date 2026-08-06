@@ -118,7 +118,7 @@ public class CBarChart : BindableObject, IDrawable
                     valueY = y + 15;
 
                 canvas.DrawString(
-                    entry.Value.ToString("0"),
+                    entry.Value.ToString("$#,0;-$#,0;$0"),
                     x + barWidth / 2,
                     valueY,
                     HorizontalAlignment.Center);
@@ -173,7 +173,7 @@ public class CBarChart : BindableObject, IDrawable
                     valueX = maxX - 5;
 
                 canvas.DrawString(
-                    entry.Value.ToString("0"),
+                    entry.Value.ToString("$#,0;-$#,0;$0"),
                     valueX,
                     y + barHeight / 2,
                     HorizontalAlignment.Left);
