@@ -15,8 +15,11 @@ public partial class CFilterButton : ContentView
         set => SetValue(IconProperty, value);
     }
 
+    // "filter_list" doesn't exist in RegularIcons at all (verified against the actual
+    // font file) - only in OutlinedIcons, which is also what the modal's close icon
+    // uses, so this was rendering as a missing/blank glyph the whole time.
     public static readonly BindableProperty IconFontFamilyProperty =
-        BindableProperty.Create(nameof(IconFontFamily), typeof(string), typeof(CFilterButton), "RegularIcons");
+        BindableProperty.Create(nameof(IconFontFamily), typeof(string), typeof(CFilterButton), "OutlinedIcons");
 
     public string IconFontFamily
     {
@@ -109,7 +112,9 @@ public partial class CFilterButton : ContentView
         if (navigation == null || FilterContent == null)
             return;
 
-        var modal = new CFilterModalPage(Title, FilterContent, ContentHeightRequest, ContentWidthRequest)
+        var buttonCenter = GetAbsoluteCenter(this);
+
+        var modal = new CFilterModalPage(Title, FilterContent, ContentHeightRequest, ContentWidthRequest, buttonCenter)
         {
             // FilterContent gets reparented onto this new, otherwise-unrelated page,
             // which would leave its {Binding ...} expressions unresolved unless the
@@ -124,5 +129,33 @@ public partial class CFilterButton : ContentView
         // animated: false - the modal page runs its own grow/shrink animation
         // (see CFilterModalPage), so the platform's own push transition is skipped.
         await navigation.PushModalAsync(modal, animated: false);
+    }
+
+    // Sums each ancestor's own position within its parent, up to the root page - MAUI
+    // has no single built-in "give me my absolute screen position" API, but each
+    // VisualElement's X/Y (its Bounds) are already relative-to-parent post-layout, so
+    // walking the chain and adding them up gives the absolute position. Doesn't account
+    // for rotation/scale transforms on an ancestor, but nothing in this app's layouts
+    // applies those, so it's a reliable enough approximation here. Shared with
+    // CFilterModalPage, which uses it to locate the card the same way.
+    internal static Point GetAbsolutePosition(VisualElement element)
+    {
+        double x = 0, y = 0;
+
+        Element? current = element;
+        while (current is VisualElement ve)
+        {
+            x += ve.X;
+            y += ve.Y;
+            current = current.Parent;
+        }
+
+        return new Point(x, y);
+    }
+
+    internal static Point GetAbsoluteCenter(VisualElement element)
+    {
+        var position = GetAbsolutePosition(element);
+        return new Point(position.X + element.Width / 2, position.Y + element.Height / 2);
     }
 }

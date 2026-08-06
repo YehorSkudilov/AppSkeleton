@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:AppSkeleton"
     BackgroundColor="Transparent">
 
-    <Grid>
+    <Grid TranslationY="-25" TranslationX="10">
 
         <!--
             No dimmed backdrop - this behaves like a dropdown. Tapping anywhere
@@ -19,7 +19,7 @@
         <local:AcrylicView
             x:Name="CardAcrylic"
             Margin="16,70,16,0"
-            Padding="16"
+            Padding="10"
             BorderColor="#40ffffff"
             CornerRadius="25"
             EffectStyle="Custom"
@@ -46,16 +46,11 @@
 
                     <local:CButton
                         Grid.Column="2"
-                        CButtonBackgroundColor="Transparent"
-                        CButtonStroke="Transparent"
                         Clicked="OnCloseClicked"
-                        HeightRequest="24"
-                        HorizontalOptions="End"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill"
                         Icon="close"
-                        IconFontFamily="OutlinedIcons"
-                        IconHeightRequest="20"
-                        UseAcrylicBackground="False"
-                        WidthRequest="24" />
+                        IconFontFamily="OutlinedIcons" />
                 </Grid>
 
                 <BoxView

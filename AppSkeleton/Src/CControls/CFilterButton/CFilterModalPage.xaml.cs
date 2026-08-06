@@ -9,9 +9,19 @@ public partial class CFilterModalPage : ContentPage
     public event EventHandler? Cancelled;
     public event EventHandler? Reset;
 
-    public CFilterModalPage(string title, View filterContent, double contentHeightRequest, double contentWidthRequest)
+    private readonly Point buttonCenter;
+    private bool hasAnimatedIn;
+
+    public CFilterModalPage(
+        string title,
+        View filterContent,
+        double contentHeightRequest,
+        double contentWidthRequest,
+        Point buttonCenter)
     {
         InitializeComponent();
+
+        this.buttonCenter = buttonCenter;
 
         TitleLabel.Text = title;
         ContentHost.Content = filterContent;
@@ -25,23 +35,60 @@ public partial class CFilterModalPage : ContentPage
         if (contentHeightRequest > 0)
             CardAcrylic.MaximumHeightRequest = contentHeightRequest;
 
-        // Anchored at the same top-right corner the card docks to, so scaling in/out
-        // from there reads as "grows out of / shrinks back into" the header icon that
-        // opened it, rather than an unrelated modal sheet animation.
-        CardAcrylic.AnchorX = 1;
-        CardAcrylic.AnchorY = 0;
-        CardAcrylic.Scale = 0.1;
+        CardAcrylic.Scale = 0.05;
     }
 
+    // Deliberately not gated behind CardAcrylic.SizeChanged - AcrylicView's native
+    // measurement has been unreliable throughout this control's development (see the
+    // BorderViewGroup/AcrylicViewHandler fixes elsewhere in this project), so waiting
+    // on it firing with a valid size risked the scale-in animation silently never
+    // running at all, leaving the popup stuck at Scale 0.05. OnAppearing always fires
+    // once the page is actually shown, so the animation is guaranteed to run either
+    // way - ApplyAnchor() falls back to a fixed corner if the card's real bounds
+    // genuinely aren't available yet.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+
+        if (hasAnimatedIn)
+            return;
+
+        hasAnimatedIn = true;
+
+        ApplyAnchor();
         await CardAcrylic.ScaleTo(1, 200, Easing.CubicOut);
+    }
+
+    private void ApplyAnchor()
+    {
+        if (CardAcrylic.Width > 0 && CardAcrylic.Height > 0)
+        {
+            var cardPosition = CFilterButton.GetAbsolutePosition(CardAcrylic);
+
+            // Where the button's center falls within the card's own bounds, as a
+            // normalized [0,1] fraction - AnchorX/AnchorY scale around that point, so
+            // the grow/shrink animation reads as coming from (and returning to) the
+            // button's actual screen position rather than an arbitrary fixed corner.
+            // Clamped since the button can sit outside the card's bounds (e.g. above
+            // it), which would otherwise anchor past the card's own edge.
+            var anchorX = (buttonCenter.X - cardPosition.X) / CardAcrylic.Width;
+            var anchorY = (buttonCenter.Y - cardPosition.Y) / CardAcrylic.Height;
+
+            CardAcrylic.AnchorX = Math.Clamp(anchorX, 0, 1);
+            CardAcrylic.AnchorY = Math.Clamp(anchorY, 0, 1);
+        }
+        else
+        {
+            // The card's real bounds aren't resolved yet - fall back to the corner it
+            // visually docks to, rather than skipping the animation entirely.
+            CardAcrylic.AnchorX = 1;
+            CardAcrylic.AnchorY = 0;
+        }
     }
 
     private async Task CloseAsync()
     {
-        await CardAcrylic.ScaleTo(0.1, 150, Easing.CubicIn);
+        await CardAcrylic.ScaleTo(0.05, 150, Easing.CubicIn);
         await Navigation.PopModalAsync(animated: false);
     }
 
