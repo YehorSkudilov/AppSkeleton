@@ -184,12 +184,17 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
     // ---------------- TAP HANDLER ----------------
     private void OnTapped(object sender, TappedEventArgs e)
     {
-        Clicked?.Invoke(this, EventArgs.Empty);
-        Select(true);
-
+        // Ripple has to start before Clicked runs - Android's RippleDrawable only
+        // animates while the view is enabled, and a lot of Clicked handlers (see
+        // BankListView's sync/relink buttons) set IsEnabled = false synchronously as
+        // their first line. Firing Clicked first meant the view was already disabled
+        // by the time the ripple tried to play, so it silently never showed.
 #if ANDROID
         _ = AnimateAndroidRippleAsync();
 #endif
+
+        Clicked?.Invoke(this, EventArgs.Empty);
+        Select(true);
     }
 
     public void Select(bool select)
