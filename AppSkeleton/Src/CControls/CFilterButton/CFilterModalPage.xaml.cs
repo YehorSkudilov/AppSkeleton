@@ -66,14 +66,17 @@ public partial class CFilterModalPage : ContentPage
         CardAcrylic.Opacity = 0;
     }
 
-    // Deliberately not gated behind CardAcrylic.SizeChanged - AcrylicView's native
+    // OnAppearing can fire before the native view has actually completed its first
+    // layout/paint pass (particularly right after PushModalAsync(animated: false),
+    // which skips the platform's own transition entirely) - starting the animation
+    // that early lets it run and finish before anything is ever drawn, so the popup
+    // just snaps straight to its final state with no visible transition. Not gated
+    // behind CardAcrylic.SizeChanged directly, though - AcrylicView's native
     // measurement has been unreliable throughout this control's development (see the
-    // BorderViewGroup/AcrylicViewHandler fixes elsewhere in this project), so waiting
-    // on it firing with a valid size risked the scale-in animation silently never
-    // running at all, leaving the popup stuck at Scale 0.05. OnAppearing always fires
-    // once the page is actually shown, so the animation is guaranteed to run either
-    // way - ApplyAnchor() falls back to a fixed corner if the card's real bounds
-    // genuinely aren't available yet.
+    // BorderViewGroup/AcrylicViewHandler fixes elsewhere in this project) and that
+    // event risked never firing at all. Poll for a real size instead, bounded so a
+    // genuinely-stuck layout still falls through to ApplyAnchor's own corner fallback
+    // and the animation runs anyway rather than hanging.
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -82,6 +85,9 @@ public partial class CFilterModalPage : ContentPage
             return;
 
         hasAnimatedIn = true;
+
+        for (var i = 0; i < 20 && CardAcrylic.Width <= 0; i++)
+            await Task.Delay(16);
 
         ApplyAnchor();
         await Task.WhenAll(
