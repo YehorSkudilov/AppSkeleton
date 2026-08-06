@@ -25,6 +25,22 @@ public class CPieChart : BindableObject, IDrawable
         set => SetValue(EntriesProperty, value);
     }
 
+    // -------------------------
+    // Label font family (e.g. an icon font alias, so Label can hold a glyph name)
+    // -------------------------
+    public static readonly BindableProperty LabelFontFamilyProperty =
+        BindableProperty.Create(
+            nameof(LabelFontFamily),
+            typeof(string),
+            typeof(CPieChart),
+            default(string));
+
+    public string LabelFontFamily
+    {
+        get => (string)GetValue(LabelFontFamilyProperty);
+        set => SetValue(LabelFontFamilyProperty, value);
+    }
+
     private static void OnEntriesChanged(BindableObject bindable, object oldValue, object newValue)
     {
         var chart = (CPieChart)bindable;
@@ -105,6 +121,9 @@ public class CPieChart : BindableObject, IDrawable
 
             canvas.FontColor = Colors.White;
             canvas.FontSize = 12;
+
+            if (!string.IsNullOrEmpty(LabelFontFamily))
+                canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
 
             canvas.DrawString(
                 $"{entry.Label}\n{entry.Value:0}",

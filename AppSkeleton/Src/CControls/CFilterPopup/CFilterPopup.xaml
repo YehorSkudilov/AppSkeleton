@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="AppSkeleton.CFilterPopup"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Name="Root">
+
+    <Grid IsVisible="{Binding IsOpen, Source={x:Reference Root}}">
+
+        <!--  BACKDROP  -->
+        <BoxView BackgroundColor="#B0000000">
+            <BoxView.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnBackgroundTapped" />
+            </BoxView.GestureRecognizers>
+        </BoxView>
+
+        <!--  CARD  -->
+        <Border
+            Margin="30"
+            Padding="20"
+            BackgroundColor="#1e1e1e"
+            HorizontalOptions="Fill"
+            Stroke="#40ffffff"
+            VerticalOptions="Center">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="20" />
+            </Border.StrokeShape>
+
+            <VerticalStackLayout Spacing="15">
+
+                <Label
+                    FontAttributes="Bold"
+                    FontSize="18"
+                    HorizontalOptions="Center"
+                    Text="{Binding Title, Source={x:Reference Root}}"
+                    TextColor="White" />
+
+                <!--  CONTENT SLOT - set via the FilterContent bindable property  -->
+                <ContentView x:Name="ContentHost" />
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button
+                        BackgroundColor="#30ffffff"
+                        Clicked="OnCancelClicked"
+                        Text="Cancel"
+                        TextColor="White" />
+
+                    <Button
+                        Grid.Column="1"
+                        BackgroundColor="#4cd0f2"
+                        Clicked="OnApplyClicked"
+                        Text="Apply"
+                        TextColor="Black" />
+                </Grid>
+
+            </VerticalStackLayout>
+        </Border>
+
+    </Grid>
+
+</ContentView>
