@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentView
-    x:Class="AppSkeleton.CFilterPopup"
+<ContentPage
+    x:Class="AppSkeleton.CFilterModalPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    x:Name="Root">
+    BackgroundColor="#B0000000">
 
-    <Grid IsVisible="{Binding IsOpen, Source={x:Reference Root}}">
+    <Grid>
 
-        <!--  BACKDROP  -->
-        <BoxView BackgroundColor="#B0000000">
-            <BoxView.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnBackgroundTapped" />
-            </BoxView.GestureRecognizers>
-        </BoxView>
+        <!--  BACKDROP - tapping outside the card cancels  -->
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnBackgroundTapped" />
+        </Grid.GestureRecognizers>
 
         <!--  CARD  -->
         <Border
@@ -26,16 +24,21 @@
                 <RoundRectangle CornerRadius="20" />
             </Border.StrokeShape>
 
+            <!--  Swallow taps so tapping the card itself doesn't fall through to the backdrop  -->
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer />
+            </Border.GestureRecognizers>
+
             <VerticalStackLayout Spacing="15">
 
                 <Label
+                    x:Name="TitleLabel"
                     FontAttributes="Bold"
                     FontSize="18"
                     HorizontalOptions="Center"
-                    Text="{Binding Title, Source={x:Reference Root}}"
                     TextColor="White" />
 
-                <!--  CONTENT SLOT - set via the FilterContent bindable property  -->
+                <!--  CONTENT SLOT - the consumer's FilterContent gets attached here  -->
                 <ContentView x:Name="ContentHost" />
 
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
@@ -58,4 +61,4 @@
 
     </Grid>
 
-</ContentView>
+</ContentPage>
