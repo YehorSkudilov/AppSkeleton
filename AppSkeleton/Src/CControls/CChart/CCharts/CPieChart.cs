@@ -67,6 +67,12 @@ public class CPieChart : BindableObject, IDrawable
     private const float LabelRowHeight = 20f;
     private const float LeaderStubLength = 10f;
     private const float LeaderTextGap = 4f;
+    private const float MinPercentForLabel = 1f;
+
+    private const float LegendRowHeight = 13f;
+    private const float LegendSwatchSize = 7f;
+    private const float LegendColumnWidth = 42f;
+    private const float LegendMargin = 4f;
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
@@ -102,12 +108,14 @@ public class CPieChart : BindableObject, IDrawable
 
         var leftSlices = new List<(CChartEntry Entry, float Mid, Color Color)>();
         var rightSlices = new List<(CChartEntry Entry, float Mid, Color Color)>();
+        var legendItems = new List<(Color Color, float Percent)>();
 
         for (int i = 0; i < Entries.Count; i++)
         {
             var entry = Entries[i];
             float sweep = (entry.Value / total) * 360f;
             var color = entry.Color ?? fallbackColors[i % fallbackColors.Length];
+            float percent = entry.Value / total * 100f;
 
             canvas.FillColor = color;
 
@@ -120,16 +128,22 @@ public class CPieChart : BindableObject, IDrawable
 
             canvas.FillPath(path);
 
+            legendItems.Add((color, percent));
+
             float mid = startAngle + sweep / 2f;
             float rad = mid * (float)Math.PI / 180f;
 
             // Split into left/right halves by which side of the circle the slice's
             // midpoint actually sits on, so labels only ever land beside the pie - never
-            // above or below it.
-            if (Math.Cos(rad) < 0)
-                leftSlices.Add((entry, mid, color));
-            else
-                rightSlices.Add((entry, mid, color));
+            // above or below it. Slices under 1% are skipped entirely - a leader line to
+            // a sliver that thin has nothing legible to point at and just adds clutter.
+            if (percent >= MinPercentForLabel)
+            {
+                if (Math.Cos(rad) < 0)
+                    leftSlices.Add((entry, mid, color));
+                else
+                    rightSlices.Add((entry, mid, color));
+            }
 
             startAngle += sweep;
         }
@@ -137,11 +151,45 @@ public class CPieChart : BindableObject, IDrawable
         if (!string.IsNullOrEmpty(LabelFontFamily))
             canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
 
-        DrawLabelColumn(canvas, leftSlices, isLeft: true, centerX, centerY, radius, total, dirtyRect);
-        DrawLabelColumn(canvas, rightSlices, isLeft: false, centerX, centerY, radius, total, dirtyRect);
+        // Legend goes in the top-right corner, so the right-hand label column has to start
+        // below it - otherwise a slice's outside label could land right on top of it.
+        float legendHeight = legendItems.Count * LegendRowHeight;
+        float legendBottom = dirtyRect.Top + LegendMargin + legendHeight;
+
+        DrawLegend(canvas, legendItems, dirtyRect);
+
+        float defaultTopBound = dirtyRect.Top + LabelRowHeight / 2f;
+        float bottomBound = dirtyRect.Bottom - LabelRowHeight / 2f;
+
+        DrawLabelColumn(canvas, leftSlices, isLeft: true, centerX, centerY, radius, total, dirtyRect, defaultTopBound, bottomBound);
+        DrawLabelColumn(canvas, rightSlices, isLeft: false, centerX, centerY, radius, total, dirtyRect, Math.Max(defaultTopBound, legendBottom + LabelRowHeight / 2f), bottomBound);
     }
 
-    private void DrawLabelColumn(ICanvas canvas, List<(CChartEntry Entry, float Mid, Color Color)> slices, bool isLeft, float centerX, float centerY, float radius, float total, RectF dirtyRect)
+    private void DrawLegend(ICanvas canvas, List<(Color Color, float Percent)> items, RectF dirtyRect)
+    {
+        if (items.Count == 0)
+            return;
+
+        float right = dirtyRect.Right - LegendMargin;
+        float left = right - LegendColumnWidth;
+
+        canvas.FontSize = 10;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            var (color, percent) = items[i];
+            float rowTop = dirtyRect.Top + LegendMargin + i * LegendRowHeight;
+
+            canvas.FillColor = color;
+            canvas.FillCircle(left + LegendSwatchSize / 2f, rowTop + LegendRowHeight / 2f, LegendSwatchSize / 2f);
+
+            canvas.FontColor = Colors.White;
+            var textRect = new RectF(left + LegendSwatchSize + 4f, rowTop, right - (left + LegendSwatchSize + 4f), LegendRowHeight);
+            canvas.DrawString($"{percent:0}%", textRect, HorizontalAlignment.Left, VerticalAlignment.Center);
+        }
+    }
+
+    private void DrawLabelColumn(ICanvas canvas, List<(CChartEntry Entry, float Mid, Color Color)> slices, bool isLeft, float centerX, float centerY, float radius, float total, RectF dirtyRect, float topBound, float bottomBound)
     {
         if (slices.Count == 0)
             return;
@@ -165,9 +213,6 @@ public class CPieChart : BindableObject, IDrawable
             float rad = slices[i].Mid * (float)Math.PI / 180f;
             y[i] = centerY + radius * (float)Math.Sin(rad);
         }
-
-        float topBound = dirtyRect.Top + LabelRowHeight / 2f;
-        float bottomBound = dirtyRect.Bottom - LabelRowHeight / 2f;
 
         // Two-pass separation (push down, then push up) plus a final clamp - the standard
         // approach for spacing out sorted labels along an axis without letting them
