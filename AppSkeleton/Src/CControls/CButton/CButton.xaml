@@ -42,7 +42,7 @@
         </Grid>
 
         <Grid VerticalOptions="Center" HorizontalOptions="Center">
-            <Label Text="{Binding Text}"/>
+            <Label VerticalOptions="Center" HorizontalOptions="Center" Text="{Binding Text}"/>
             <Image
                 Margin="{Binding IconPadding}"
                 HeightRequest="{Binding IconHeightRequest}"
