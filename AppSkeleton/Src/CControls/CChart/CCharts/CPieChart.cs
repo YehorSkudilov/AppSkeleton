@@ -146,7 +146,16 @@ public class CPieChart : BindableObject, IDrawable
         if (slices.Count == 0)
             return;
 
-        slices.Sort((a, b) => a.Mid.CompareTo(b.Mid));
+        // Order top-to-bottom by the slice's actual edge height, not by raw angle - on the
+        // left half of the circle, sin(angle) is decreasing as angle increases, so sorting
+        // by angle instead would put labels in the opposite order from their slices and
+        // send every leader line crossing through its neighbors.
+        slices.Sort((a, b) =>
+        {
+            float ay = (float)Math.Sin(a.Mid * (float)Math.PI / 180f);
+            float by = (float)Math.Sin(b.Mid * (float)Math.PI / 180f);
+            return ay.CompareTo(by);
+        });
 
         // Desired row = the height at which the slice's own edge point sits, so a label
         // naturally lines up with its slice when there's no crowding to resolve.
