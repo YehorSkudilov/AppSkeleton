@@ -111,47 +111,59 @@ public class CPieChart : BindableObject, IDrawable
             // -------------------------
             // LABEL (centered safely inside)
             // -------------------------
-            float mid = startAngle + sweep / 2f;
-            float rad = mid * (float)Math.PI / 180f;
-
             float labelRadius = radius * 0.6f;
 
-            float x = centerX + labelRadius * (float)Math.Cos(rad);
-            float y = centerY + labelRadius * (float)Math.Sin(rad);
-
-            // Circle badge behind the emoji - same translucent-white icon-badge look
-            // used elsewhere (e.g. BudgetListView's category icon), rather than the
-            // glyph floating bare on the slice.
+            // A slice thinner (along its arc, at the radius the badge sits on) than the
+            // badge itself has no way to fit it without overlapping whichever neighbor
+            // it lands closest to - skip the badge/value entirely below that width
+            // rather than drawing something guaranteed to collide. Computed from the
+            // actual badge size and radius (not a flat percentage cutoff) so it holds at
+            // any chart/canvas size instead of being tuned for one.
             const float badgeRadius = 13f;
-            float badgeCenterY = y - 8f;
+            const float minBadgeGapFactor = 2.2f; // headroom so neighboring badges don't just barely touch
+            float minSweepForLabel = (badgeRadius * minBadgeGapFactor) / labelRadius * (180f / (float)Math.PI);
 
-            canvas.FillColor = Color.FromArgb("#30ffffff");
-            canvas.FillCircle(x, badgeCenterY, badgeRadius);
+            if (sweep >= minSweepForLabel)
+            {
+                float mid = startAngle + sweep / 2f;
+                float rad = mid * (float)Math.PI / 180f;
 
-            canvas.StrokeColor = Color.FromArgb("#40ffffff");
-            canvas.StrokeSize = 1;
-            canvas.DrawCircle(x, badgeCenterY, badgeRadius);
+                float x = centerX + labelRadius * (float)Math.Cos(rad);
+                float y = centerY + labelRadius * (float)Math.Sin(rad);
 
-            canvas.FontColor = Colors.White;
+                // Circle badge behind the emoji - same translucent-white icon-badge look
+                // used elsewhere (e.g. BudgetListView's category icon), rather than the
+                // glyph floating bare on the slice.
+                float badgeCenterY = y - 8f;
 
-            if (!string.IsNullOrEmpty(LabelFontFamily))
-                canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
+                canvas.FillColor = Color.FromArgb("#30ffffff");
+                canvas.FillCircle(x, badgeCenterY, badgeRadius);
 
-            // The point-based DrawString overload anchors by the text's top, not its
-            // center, so the emoji was landing below the badge rather than inside it -
-            // the rect-based overload with VerticalAlignment.Center actually centers on
-            // both axes.
-            canvas.FontSize = 14;
-            var badgeRect = new RectF(x - badgeRadius, badgeCenterY - badgeRadius, badgeRadius * 2, badgeRadius * 2);
-            canvas.DrawString(entry.Label, badgeRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+                canvas.StrokeColor = Color.FromArgb("#40ffffff");
+                canvas.StrokeSize = 1;
+                canvas.DrawCircle(x, badgeCenterY, badgeRadius);
 
-            // Value sits in its own rect below the badge, with a real gap instead of
-            // being packed against it.
-            const float valueGap = 3f;
-            const float valueHeight = 16f;
-            canvas.FontSize = 12;
-            var valueRect = new RectF(x - 20, badgeCenterY + badgeRadius + valueGap, 40, valueHeight);
-            canvas.DrawString($"{entry.Value / total * 100:0}%", valueRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+                canvas.FontColor = Colors.White;
+
+                if (!string.IsNullOrEmpty(LabelFontFamily))
+                    canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
+
+                // The point-based DrawString overload anchors by the text's top, not its
+                // center, so the emoji was landing below the badge rather than inside it -
+                // the rect-based overload with VerticalAlignment.Center actually centers on
+                // both axes.
+                canvas.FontSize = 14;
+                var badgeRect = new RectF(x - badgeRadius, badgeCenterY - badgeRadius, badgeRadius * 2, badgeRadius * 2);
+                canvas.DrawString(entry.Label, badgeRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+
+                // Value sits in its own rect below the badge, with a real gap instead of
+                // being packed against it.
+                const float valueGap = 3f;
+                const float valueHeight = 16f;
+                canvas.FontSize = 12;
+                var valueRect = new RectF(x - 20, badgeCenterY + badgeRadius + valueGap, 40, valueHeight);
+                canvas.DrawString($"{entry.Value / total * 100:0}%", valueRect, HorizontalAlignment.Center, VerticalAlignment.Center);
+            }
 
             startAngle += sweep;
         }
