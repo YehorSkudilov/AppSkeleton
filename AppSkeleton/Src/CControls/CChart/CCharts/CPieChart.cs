@@ -63,6 +63,11 @@ public class CPieChart : BindableObject, IDrawable
     // -------------------------
     // DRAW
     // -------------------------
+    private const float LabelColumnWidth = 92f;
+    private const float LabelRowHeight = 22f;
+    private const float LeaderStubLength = 16f;
+    private const float LeaderTextGap = 6f;
+
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
         if (Entries == null || Entries.Count == 0)
@@ -72,11 +77,15 @@ public class CPieChart : BindableObject, IDrawable
         if (total <= 0)
             return;
 
-        // 🔥 no padding at all
         float centerX = dirtyRect.Width / 2;
         float centerY = dirtyRect.Height / 2;
 
-        float radius = Math.Min(dirtyRect.Width, dirtyRect.Height) * 0.45f;
+        // The circle has to leave room on both sides for the label columns and their
+        // leader lines, so it's sized off the narrower of "width minus both columns" and
+        // "height", not just the raw dirtyRect like an inline-labeled pie would be.
+        float maxRadiusByWidth = centerX - LabelColumnWidth - LeaderStubLength;
+        float maxRadiusByHeight = centerY - 4f;
+        float radius = Math.Max(10f, Math.Min(maxRadiusByWidth, maxRadiusByHeight));
 
         float startAngle = -90f;
 
@@ -91,16 +100,19 @@ public class CPieChart : BindableObject, IDrawable
             Colors.CornflowerBlue
         };
 
+        var leftSlices = new List<(CChartEntry Entry, float Mid, Color Color)>();
+        var rightSlices = new List<(CChartEntry Entry, float Mid, Color Color)>();
+
         for (int i = 0; i < Entries.Count; i++)
         {
             var entry = Entries[i];
             float sweep = (entry.Value / total) * 360f;
+            var color = entry.Color ?? fallbackColors[i % fallbackColors.Length];
 
-            canvas.FillColor = entry.Color ?? fallbackColors[i % fallbackColors.Length];
+            canvas.FillColor = color;
 
             float endAngle = startAngle + sweep;
 
-            // slice
             var path = new PathF();
             path.MoveTo(centerX, centerY);
             AddArcToPath(path, centerX, centerY, radius, startAngle, endAngle);
@@ -108,64 +120,99 @@ public class CPieChart : BindableObject, IDrawable
 
             canvas.FillPath(path);
 
-            // -------------------------
-            // LABEL (centered safely inside)
-            // -------------------------
-            float labelRadius = radius * 0.6f;
+            float mid = startAngle + sweep / 2f;
+            float rad = mid * (float)Math.PI / 180f;
 
-            // A slice thinner (along its arc, at the radius the badge sits on) than the
-            // badge itself has no way to fit it without overlapping whichever neighbor
-            // it lands closest to - skip the badge/value entirely below that width
-            // rather than drawing something guaranteed to collide. Computed from the
-            // actual badge size and radius (not a flat percentage cutoff) so it holds at
-            // any chart/canvas size instead of being tuned for one.
-            const float badgeRadius = 13f;
-            const float minBadgeGapFactor = 2.2f; // headroom so neighboring badges don't just barely touch
-            float minSweepForLabel = (badgeRadius * minBadgeGapFactor) / labelRadius * (180f / (float)Math.PI);
-
-            if (sweep >= minSweepForLabel)
-            {
-                float mid = startAngle + sweep / 2f;
-                float rad = mid * (float)Math.PI / 180f;
-
-                float x = centerX + labelRadius * (float)Math.Cos(rad);
-                float y = centerY + labelRadius * (float)Math.Sin(rad);
-
-                // Circle badge behind the emoji - same translucent-white icon-badge look
-                // used elsewhere (e.g. BudgetListView's category icon), rather than the
-                // glyph floating bare on the slice.
-                float badgeCenterY = y - 8f;
-
-                canvas.FillColor = Color.FromArgb("#30ffffff");
-                canvas.FillCircle(x, badgeCenterY, badgeRadius);
-
-                canvas.StrokeColor = Color.FromArgb("#40ffffff");
-                canvas.StrokeSize = 1;
-                canvas.DrawCircle(x, badgeCenterY, badgeRadius);
-
-                canvas.FontColor = Colors.White;
-
-                if (!string.IsNullOrEmpty(LabelFontFamily))
-                    canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
-
-                // The point-based DrawString overload anchors by the text's top, not its
-                // center, so the emoji was landing below the badge rather than inside it -
-                // the rect-based overload with VerticalAlignment.Center actually centers on
-                // both axes.
-                canvas.FontSize = 14;
-                var badgeRect = new RectF(x - badgeRadius, badgeCenterY - badgeRadius, badgeRadius * 2, badgeRadius * 2);
-                canvas.DrawString(entry.Label, badgeRect, HorizontalAlignment.Center, VerticalAlignment.Center);
-
-                // Value sits in its own rect below the badge, with a real gap instead of
-                // being packed against it.
-                const float valueGap = 3f;
-                const float valueHeight = 16f;
-                canvas.FontSize = 12;
-                var valueRect = new RectF(x - 20, badgeCenterY + badgeRadius + valueGap, 40, valueHeight);
-                canvas.DrawString($"{entry.Value / total * 100:0}%", valueRect, HorizontalAlignment.Center, VerticalAlignment.Center);
-            }
+            // Split into left/right halves by which side of the circle the slice's
+            // midpoint actually sits on, so labels only ever land beside the pie - never
+            // above or below it.
+            if (Math.Cos(rad) < 0)
+                leftSlices.Add((entry, mid, color));
+            else
+                rightSlices.Add((entry, mid, color));
 
             startAngle += sweep;
+        }
+
+        if (!string.IsNullOrEmpty(LabelFontFamily))
+            canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
+
+        DrawLabelColumn(canvas, leftSlices, isLeft: true, centerX, centerY, radius, total, dirtyRect);
+        DrawLabelColumn(canvas, rightSlices, isLeft: false, centerX, centerY, radius, total, dirtyRect);
+    }
+
+    private void DrawLabelColumn(ICanvas canvas, List<(CChartEntry Entry, float Mid, Color Color)> slices, bool isLeft, float centerX, float centerY, float radius, float total, RectF dirtyRect)
+    {
+        if (slices.Count == 0)
+            return;
+
+        slices.Sort((a, b) => a.Mid.CompareTo(b.Mid));
+
+        // Desired row = the height at which the slice's own edge point sits, so a label
+        // naturally lines up with its slice when there's no crowding to resolve.
+        float[] y = new float[slices.Count];
+        for (int i = 0; i < slices.Count; i++)
+        {
+            float rad = slices[i].Mid * (float)Math.PI / 180f;
+            y[i] = centerY + radius * (float)Math.Sin(rad);
+        }
+
+        float topBound = dirtyRect.Top + LabelRowHeight / 2f;
+        float bottomBound = dirtyRect.Bottom - LabelRowHeight / 2f;
+
+        // Two-pass separation (push down, then push up) plus a final clamp - the standard
+        // approach for spacing out sorted labels along an axis without letting them
+        // overlap, even when several slices' midpoints land close together.
+        for (int i = 1; i < y.Length; i++)
+            y[i] = Math.Max(y[i], y[i - 1] + LabelRowHeight);
+
+        if (y[^1] > bottomBound)
+        {
+            y[^1] = bottomBound;
+            for (int i = y.Length - 2; i >= 0; i--)
+                y[i] = Math.Min(y[i], y[i + 1] - LabelRowHeight);
+        }
+
+        if (y[0] < topBound)
+        {
+            y[0] = topBound;
+            for (int i = 1; i < y.Length; i++)
+                y[i] = Math.Max(y[i], y[i - 1] + LabelRowHeight);
+        }
+
+        float elbowX = isLeft ? centerX - radius - LeaderStubLength : centerX + radius + LeaderStubLength;
+
+        for (int i = 0; i < slices.Count; i++)
+        {
+            var (entry, mid, color) = slices[i];
+            float rad = mid * (float)Math.PI / 180f;
+
+            float edgeX = centerX + radius * (float)Math.Cos(rad);
+            float edgeY = centerY + radius * (float)Math.Sin(rad);
+
+            // Leader line: out horizontally from the slice edge to the label column, then
+            // up/down to the resolved row - never cuts back across the pie because the
+            // horizontal leg travels away from center at the edge point's own height.
+            canvas.StrokeColor = color.WithAlpha(0.7f);
+            canvas.StrokeSize = 1.25f;
+            canvas.DrawLine(edgeX, edgeY, elbowX, edgeY);
+            if (Math.Abs(edgeY - y[i]) > 0.5f)
+                canvas.DrawLine(elbowX, edgeY, elbowX, y[i]);
+
+            canvas.FillColor = color;
+            canvas.FillCircle(elbowX, y[i], 2f);
+
+            canvas.FontColor = Colors.White;
+            canvas.FontSize = 13;
+
+            float percent = entry.Value / total * 100f;
+            string text = $"{entry.Label} {percent:0}%";
+
+            var textRect = isLeft
+                ? new RectF(dirtyRect.Left, y[i] - LabelRowHeight / 2f, elbowX - LeaderTextGap - dirtyRect.Left, LabelRowHeight)
+                : new RectF(elbowX + LeaderTextGap, y[i] - LabelRowHeight / 2f, dirtyRect.Right - (elbowX + LeaderTextGap), LabelRowHeight);
+
+            canvas.DrawString(text, textRect, isLeft ? HorizontalAlignment.Right : HorizontalAlignment.Left, VerticalAlignment.Center);
         }
     }
 
