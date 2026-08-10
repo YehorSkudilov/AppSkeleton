@@ -63,10 +63,10 @@ public class CPieChart : BindableObject, IDrawable
     // -------------------------
     // DRAW
     // -------------------------
-    private const float LabelColumnWidth = 92f;
-    private const float LabelRowHeight = 22f;
-    private const float LeaderStubLength = 16f;
-    private const float LeaderTextGap = 6f;
+    private const float LabelColumnWidth = 64f;
+    private const float LabelRowHeight = 20f;
+    private const float LeaderStubLength = 10f;
+    private const float LeaderTextGap = 4f;
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
