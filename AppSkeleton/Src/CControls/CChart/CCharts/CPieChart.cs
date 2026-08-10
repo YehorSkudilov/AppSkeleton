@@ -69,11 +69,6 @@ public class CPieChart : BindableObject, IDrawable
     private const float LeaderTextGap = 4f;
     private const float MinPercentForLabel = 1f;
 
-    private const float LegendRowHeight = 13f;
-    private const float LegendSwatchSize = 7f;
-    private const float LegendColumnWidth = 42f;
-    private const float LegendMargin = 4f;
-
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
         if (Entries == null || Entries.Count == 0)
@@ -108,7 +103,6 @@ public class CPieChart : BindableObject, IDrawable
 
         var leftSlices = new List<(CChartEntry Entry, float Mid, Color Color)>();
         var rightSlices = new List<(CChartEntry Entry, float Mid, Color Color)>();
-        var legendItems = new List<(Color Color, float Percent)>();
 
         for (int i = 0; i < Entries.Count; i++)
         {
@@ -127,8 +121,6 @@ public class CPieChart : BindableObject, IDrawable
             path.Close();
 
             canvas.FillPath(path);
-
-            legendItems.Add((color, percent));
 
             float mid = startAngle + sweep / 2f;
             float rad = mid * (float)Math.PI / 180f;
@@ -151,45 +143,11 @@ public class CPieChart : BindableObject, IDrawable
         if (!string.IsNullOrEmpty(LabelFontFamily))
             canvas.Font = new Microsoft.Maui.Graphics.Font(LabelFontFamily);
 
-        // Legend goes in the top-right corner, so the right-hand label column has to start
-        // below it - otherwise a slice's outside label could land right on top of it.
-        float legendHeight = legendItems.Count * LegendRowHeight;
-        float legendBottom = dirtyRect.Top + LegendMargin + legendHeight;
-
-        DrawLegend(canvas, legendItems, dirtyRect);
-
-        float defaultTopBound = dirtyRect.Top + LabelRowHeight / 2f;
-        float bottomBound = dirtyRect.Bottom - LabelRowHeight / 2f;
-
-        DrawLabelColumn(canvas, leftSlices, isLeft: true, centerX, centerY, radius, total, dirtyRect, defaultTopBound, bottomBound);
-        DrawLabelColumn(canvas, rightSlices, isLeft: false, centerX, centerY, radius, total, dirtyRect, Math.Max(defaultTopBound, legendBottom + LabelRowHeight / 2f), bottomBound);
+        DrawLabelColumn(canvas, leftSlices, isLeft: true, centerX, centerY, radius, total, dirtyRect);
+        DrawLabelColumn(canvas, rightSlices, isLeft: false, centerX, centerY, radius, total, dirtyRect);
     }
 
-    private void DrawLegend(ICanvas canvas, List<(Color Color, float Percent)> items, RectF dirtyRect)
-    {
-        if (items.Count == 0)
-            return;
-
-        float right = dirtyRect.Right - LegendMargin;
-        float left = right - LegendColumnWidth;
-
-        canvas.FontSize = 10;
-
-        for (int i = 0; i < items.Count; i++)
-        {
-            var (color, percent) = items[i];
-            float rowTop = dirtyRect.Top + LegendMargin + i * LegendRowHeight;
-
-            canvas.FillColor = color;
-            canvas.FillCircle(left + LegendSwatchSize / 2f, rowTop + LegendRowHeight / 2f, LegendSwatchSize / 2f);
-
-            canvas.FontColor = Colors.White;
-            var textRect = new RectF(left + LegendSwatchSize + 4f, rowTop, right - (left + LegendSwatchSize + 4f), LegendRowHeight);
-            canvas.DrawString($"{percent:0}%", textRect, HorizontalAlignment.Left, VerticalAlignment.Center);
-        }
-    }
-
-    private void DrawLabelColumn(ICanvas canvas, List<(CChartEntry Entry, float Mid, Color Color)> slices, bool isLeft, float centerX, float centerY, float radius, float total, RectF dirtyRect, float topBound, float bottomBound)
+    private void DrawLabelColumn(ICanvas canvas, List<(CChartEntry Entry, float Mid, Color Color)> slices, bool isLeft, float centerX, float centerY, float radius, float total, RectF dirtyRect)
     {
         if (slices.Count == 0)
             return;
@@ -213,6 +171,9 @@ public class CPieChart : BindableObject, IDrawable
             float rad = slices[i].Mid * (float)Math.PI / 180f;
             y[i] = centerY + radius * (float)Math.Sin(rad);
         }
+
+        float topBound = dirtyRect.Top + LabelRowHeight / 2f;
+        float bottomBound = dirtyRect.Bottom - LabelRowHeight / 2f;
 
         // Two-pass separation (push down, then push up) plus a final clamp - the standard
         // approach for spacing out sorted labels along an axis without letting them
