@@ -26,6 +26,20 @@
 		<MauiFont Include="Recources\Fonts\*" />
 	</ItemGroup>
 
+	<!-- WINDOWS: MauiFont registers these fonts for lookup, but on an unpackaged
+	     Windows build (see BudgetBuddy.csproj's WindowsPackageType=None) that alone
+	     doesn't put the physical files anywhere FontRegistrar's native-font lookup can
+	     find them at runtime - so it throws, the alias never resolves, and controls
+	     using it (icons via CButton/CNavBar's FontImageSource) silently fall back to
+	     the default font instead of the icon glyphs. Copying them to Assets\Fonts
+	     (propagated into BudgetBuddy's own output via ProjectReference) matches the
+	     exact relative path FontRegistrar's LoadNativeAppFont checks first. -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<None Include="Recources\Fonts\*.ttf;Recources\Fonts\*.otf" CopyToOutputDirectory="PreserveNewest">
+			<Link>Assets\Fonts\%(Filename)%(Extension)</Link>
+		</None>
+	</ItemGroup>
+
 	<ItemGroup>
 	  <Compile Update="Src\CControls\CChart\CChart.xaml.cs">
 	    <DependentUpon>CChart.xaml</DependentUpon>
