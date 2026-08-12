@@ -152,8 +152,11 @@ public class CBarChart : BindableObject, IDrawable
                 canvas.FillColor = entry.Color ?? Colors.DodgerBlue;
                 canvas.FillRectangle(x, y, barWidth, barHeight);
 
-                // VALUE LABEL - above a positive bar (or inside it if that would
-                // clip past the top), below a negative one since it hangs downward.
+                // VALUE LABEL - above a positive bar (or inside it if that would clip
+                // past the top), below a negative one (or inside it, near the bottom,
+                // if that would otherwise overlap the category label row beneath the
+                // chart - same "not enough room outside, so go inside" fallback the
+                // positive case already uses at the opposite edge).
                 canvas.FontColor = Colors.White;
 
                 float valueY;
@@ -166,6 +169,8 @@ public class CBarChart : BindableObject, IDrawable
                 else
                 {
                     valueY = y + barHeight + 15;
+                    if (valueY > padding + height)
+                        valueY = y + barHeight - 12;
                 }
 
                 canvas.DrawString(
