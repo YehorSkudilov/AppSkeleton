@@ -34,6 +34,7 @@
                 <TapGestureRecognizer />
             </local:AcrylicView.GestureRecognizers>
 
+
             <VerticalStackLayout Spacing="15">
 
                 <Grid ColumnDefinitions="*,auto, *">
@@ -47,14 +48,14 @@
 
                     <local:CButton
                         Grid.Column="2"
+                        Margin="3,0"
                         Clicked="OnCloseClicked"
                         HorizontalOptions="End"
-                        VerticalOptions="Center"
-                        Margin="3,0"
                         Icon="{Binding Icon, Source={x:Reference Root}}"
                         IconFontFamily="{Binding IconFontFamily, Source={x:Reference Root}}"
                         IconHeightRequest="20"
-                        WidthRequest="20"/>
+                        VerticalOptions="Center"
+                        WidthRequest="20" />
                 </Grid>
 
                 <BoxView
@@ -63,8 +64,9 @@
                     Opacity="0.3" />
 
                 <!--  CONTENT SLOT - the consumer's FilterContent gets attached here  -->
-                <ContentView x:Name="ContentHost" />
-
+                <ScrollView>
+                    <ContentView x:Name="ContentHost" />
+                </ScrollView>
                 <Button
                     BackgroundColor="#30ffffff"
                     Clicked="OnResetClicked"

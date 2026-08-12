@@ -82,7 +82,10 @@ public class CBarChart : BindableObject, IDrawable
         float width = dirtyRect.Width - padding * 2 - (IsHorizontal ? sideSpace : 0);
         float height = dirtyRect.Height - padding * 2 - (!IsHorizontal ? bottomSpace : 0);
 
-        float max = Entries.Max(e => e.Value);
+        // Negative entries render as a flat, zero-height bar rather than one that
+        // dips below the baseline (or, worse, flips the axis if it happens to be the
+        // largest-magnitude entry) - the value label still shows the real number.
+        float max = Entries.Max(e => Math.Max(0, e.Value));
         if (max == 0) max = 1;
 
         int count = Entries.Count;
@@ -101,7 +104,7 @@ public class CBarChart : BindableObject, IDrawable
             {
                 var entry = Entries[i];
 
-                float barHeight = (entry.Value / max) * height;
+                float barHeight = (Math.Max(0, entry.Value) / max) * height;
 
                 float x = padding + i * (barWidth + spacing);
                 float y = padding + (height - barHeight);
@@ -145,7 +148,7 @@ public class CBarChart : BindableObject, IDrawable
             {
                 var entry = Entries[i];
 
-                float barWidth = (entry.Value / max) * width;
+                float barWidth = (Math.Max(0, entry.Value) / max) * width;
 
                 float x = padding + sideSpace;
                 float y = padding + i * (barHeight + spacing);
