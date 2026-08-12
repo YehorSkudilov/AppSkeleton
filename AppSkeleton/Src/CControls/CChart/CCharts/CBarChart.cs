@@ -82,9 +82,10 @@ public class CBarChart : BindableObject, IDrawable
         float width = dirtyRect.Width - padding * 2 - (IsHorizontal ? sideSpace : 0);
         float height = dirtyRect.Height - padding * 2 - (!IsHorizontal ? bottomSpace : 0);
 
-        // Negative entries render as a flat, zero-height bar rather than one that
-        // dips below the baseline (or, worse, flips the axis if it happens to be the
-        // largest-magnitude entry) - the value label still shows the real number.
+        // Only used by the horizontal layout below - negative entries there still
+        // render as a flat, zero-width bar rather than one that extends past the left
+        // edge. The vertical layout handles negatives properly with its own zero-line
+        // split instead (see maxPositive/maxNegative below).
         float max = Entries.Max(e => Math.Max(0, e.Value));
         if (max == 0) max = 1;
 
@@ -100,25 +101,72 @@ public class CBarChart : BindableObject, IDrawable
         {
             float barWidth = (width - (count - 1) * spacing) / count;
 
+            // Split the available height into a zone above the zero line (for
+            // positive entries) and a zone below it (for negative ones), sized
+            // proportionally to the largest magnitude on each side - not a fixed
+            // 50/50 split, so an all-positive (or all-negative) set of entries still
+            // uses the full height exactly like before negative values were handled
+            // at all.
+            float maxPositive = Entries.Max(e => Math.Max(0, e.Value));
+            float maxNegative = Entries.Max(e => Math.Max(0, -e.Value));
+            float totalRange = maxPositive + maxNegative;
+
+            float positiveZoneHeight = totalRange > 0 ? height * (maxPositive / totalRange) : height;
+            float negativeZoneHeight = height - positiveZoneHeight;
+            float baselineY = padding + positiveZoneHeight;
+
+            // Floored to 1 only for the division below - positiveZoneHeight/
+            // negativeZoneHeight are already correctly 0 on whichever side has no
+            // entries, so this can't make a bar appear where it shouldn't.
+            float positiveScale = maxPositive == 0 ? 1 : maxPositive;
+            float negativeScale = maxNegative == 0 ? 1 : maxNegative;
+
+            // Zero line - only meaningful, and only drawn, when entries actually
+            // split across both sides of it.
+            if (positiveZoneHeight > 0 && negativeZoneHeight > 0)
+            {
+                canvas.StrokeColor = Colors.Gray;
+                canvas.StrokeSize = 1;
+                canvas.DrawLine(padding, baselineY, padding + width, baselineY);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 var entry = Entries[i];
 
-                float barHeight = (Math.Max(0, entry.Value) / max) * height;
-
                 float x = padding + i * (barWidth + spacing);
-                float y = padding + (height - barHeight);
+                float y, barHeight;
+
+                if (entry.Value >= 0)
+                {
+                    barHeight = (entry.Value / positiveScale) * positiveZoneHeight;
+                    y = baselineY - barHeight;
+                }
+                else
+                {
+                    barHeight = (-entry.Value / negativeScale) * negativeZoneHeight;
+                    y = baselineY;
+                }
 
                 // BAR
                 canvas.FillColor = entry.Color ?? Colors.DodgerBlue;
                 canvas.FillRectangle(x, y, barWidth, barHeight);
 
-                // VALUE LABEL (above or inside safely)
+                // VALUE LABEL - above a positive bar (or inside it if that would
+                // clip past the top), below a negative one since it hangs downward.
                 canvas.FontColor = Colors.White;
 
-                float valueY = y - 12;
-                if (valueY < padding)
-                    valueY = y + 15;
+                float valueY;
+                if (entry.Value >= 0)
+                {
+                    valueY = y - 12;
+                    if (valueY < padding)
+                        valueY = y + 15;
+                }
+                else
+                {
+                    valueY = y + barHeight + 15;
+                }
 
                 canvas.DrawString(
                     entry.Value.ToString("$#,0;-$#,0;$0"),
@@ -126,7 +174,8 @@ public class CBarChart : BindableObject, IDrawable
                     valueY,
                     HorizontalAlignment.Center);
 
-                // LABEL (below bar with proper gap)
+                // CATEGORY LABEL (always at the very bottom of the chart area,
+                // regardless of which side of the zero line this bar landed on)
                 canvas.FontColor = Colors.White;
 
                 canvas.DrawString(
