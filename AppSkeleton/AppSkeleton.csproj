@@ -53,6 +53,9 @@
 	  <MauiXaml Update="Src\CControls\CButton\CButton.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  <MauiXaml Update="Src\CControls\CPasswordEntry\CPasswordEntry.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Src\CControls\CChart\CChart.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
