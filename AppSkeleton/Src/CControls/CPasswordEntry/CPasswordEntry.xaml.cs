@@ -59,10 +59,10 @@ public partial class CPasswordEntry : ContentView
 
     private void OnEntryCompleted(object sender, EventArgs e) => Completed?.Invoke(this, e);
 
-    private void OnToggleVisibility(object sender, TappedEventArgs e)
+    private void OnToggleVisibility(object sender, EventArgs e)
     {
         PasswordInput.IsPassword = !PasswordInput.IsPassword;
-        VisibilityToggle.Text = PasswordInput.IsPassword ? "👁" : "🙈";
+        VisibilityToggle.Icon = PasswordInput.IsPassword ? "visibility" : "visibility_off";
     }
 
     // Shadows VisualElement.Focus/Unfocus rather than overriding (neither is virtual) -
@@ -72,4 +72,6 @@ public partial class CPasswordEntry : ContentView
     public new bool Focus() => PasswordInput.Focus();
 
     public new void Unfocus() => PasswordInput.Unfocus();
+
+ 
 }
