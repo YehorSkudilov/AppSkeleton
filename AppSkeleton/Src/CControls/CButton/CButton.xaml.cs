@@ -12,6 +12,27 @@ public partial class CButton : ContentView
         set => SetValue(TextProperty, value);
     }
 
+    public static readonly BindableProperty FontSizeProperty =
+        BindableProperty.Create(nameof(FontSize), typeof(double), typeof(CButton), 14.0);
+
+    public double FontSize
+    {
+        get => (double)GetValue(FontSizeProperty);
+        set => SetValue(FontSizeProperty, value);
+    }
+
+    // Defaults to White (not the app's Light/Dark AppThemeBinding) since the app forces
+    // Dark theme at startup (see App.xaml.cs) - White is what every existing CButton
+    // text already rendered as before this property existed.
+    public static readonly BindableProperty TextColorProperty =
+        BindableProperty.Create(nameof(TextColor), typeof(Color), typeof(CButton), Colors.White);
+
+    public Color TextColor
+    {
+        get => (Color)GetValue(TextColorProperty);
+        set => SetValue(TextColorProperty, value);
+    }
+
     public static readonly BindableProperty CornerRadiusProperty =
     BindableProperty.Create(
         nameof(CornerRadius),
@@ -65,13 +86,15 @@ public partial class CButton : ContentView
     }
 
     // ---------------- PADDING ----------------
-    public static readonly BindableProperty IconPaddingProperty =
-        BindableProperty.Create(nameof(IconPadding), typeof(Thickness), typeof(CButton), new Thickness(0));
+    // Padding of the button's whole content area (both Text and Icon), inset from the
+    // button's actual background edges - not just a margin hack on the icon Image.
+    public static readonly BindableProperty CButtonPaddingProperty =
+        BindableProperty.Create(nameof(CButtonPadding), typeof(Thickness), typeof(CButton), new Thickness(0));
 
-    public Thickness IconPadding
+    public Thickness CButtonPadding
     {
-        get => (Thickness)GetValue(IconPaddingProperty);
-        set => SetValue(IconPaddingProperty, value);
+        get => (Thickness)GetValue(CButtonPaddingProperty);
+        set => SetValue(CButtonPaddingProperty, value);
     }
 
     // ---------------- FONT ----------------

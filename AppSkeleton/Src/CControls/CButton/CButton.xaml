@@ -27,9 +27,11 @@
                 TintColor="{Binding CButtonBackgroundColor}"
                 TintOpacity=".5" />
 
-            <!--  Flat fallback for when the blur/measurement overhead of AcrylicView
-                  isn't wanted (or, in some layout contexts, doesn't behave) - same
-                  stroke/fill colors, no blur.  -->
+            <!--
+                Flat fallback for when the blur/measurement overhead of AcrylicView
+                isn't wanted (or, in some layout contexts, doesn't behave) - same
+                stroke/fill colors, no blur.
+            -->
             <Border
                 BackgroundColor="{Binding CButtonBackgroundColor}"
                 IsVisible="{Binding UseAcrylicBackground, Converter={StaticResource InverseBoolConverter}}"
@@ -41,20 +43,27 @@
 
         </Grid>
 
-        <Grid VerticalOptions="Center" HorizontalOptions="Center">
-            <Label VerticalOptions="Center" HorizontalOptions="Center" Text="{Binding Text}"/>
+        <Grid Padding="{Binding CButtonPadding}">
+            <Label
+                FontSize="{Binding FontSize}"
+                HorizontalOptions="Center"
+                MinimumHeightRequest="0"
+                Text="{Binding Text}"
+                TextColor="{Binding TextColor}"
+                VerticalOptions="Center" />
             <Image
-                Margin="{Binding IconPadding}"
                 HeightRequest="{Binding IconHeightRequest}"
+                HorizontalOptions="Center"
                 MinimumHeightRequest="0"
                 MinimumWidthRequest="0"
+                VerticalOptions="Center"
                 WidthRequest="{Binding IconWidthRequest}">
                 <Image.Source>
                     <FontImageSource
                         FontFamily="{Binding CurrentFontFamily}"
                         Glyph="{Binding Icon}"
-                        Color="{Binding IconColor}"
-                        Size="100" />
+                        Size="100"
+                        Color="{Binding IconColor}" />
                 </Image.Source>
             </Image>
         </Grid>
