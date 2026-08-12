@@ -123,12 +123,20 @@ public class CBarChart : BindableObject, IDrawable
 
             // Zero line - only meaningful, and only drawn, when entries actually
             // split across both sides of it.
-            if (positiveZoneHeight > 0 && negativeZoneHeight > 0)
+            bool hasZeroLine = positiveZoneHeight > 0 && negativeZoneHeight > 0;
+            if (hasZeroLine)
             {
-                canvas.StrokeColor = Colors.Gray;
+                canvas.StrokeColor = Colors.White;
                 canvas.StrokeSize = 1;
                 canvas.DrawLine(padding, baselineY, padding + width, baselineY);
             }
+
+            // A small gap so bars float off the zero line instead of touching/
+            // overlapping it - only applied when the line is actually drawn, so an
+            // all-positive (or all-negative) chart still uses its full zone height
+            // right down to the edge like before this existed.
+            const float zeroLineGap = 4f;
+            float gap = hasZeroLine ? zeroLineGap : 0f;
 
             for (int i = 0; i < count; i++)
             {
@@ -139,13 +147,15 @@ public class CBarChart : BindableObject, IDrawable
 
                 if (entry.Value >= 0)
                 {
-                    barHeight = (entry.Value / positiveScale) * positiveZoneHeight;
-                    y = baselineY - barHeight;
+                    float usableHeight = Math.Max(0, positiveZoneHeight - gap);
+                    barHeight = (entry.Value / positiveScale) * usableHeight;
+                    y = baselineY - gap - barHeight;
                 }
                 else
                 {
-                    barHeight = (-entry.Value / negativeScale) * negativeZoneHeight;
-                    y = baselineY;
+                    float usableHeight = Math.Max(0, negativeZoneHeight - gap);
+                    barHeight = (-entry.Value / negativeScale) * usableHeight;
+                    y = baselineY + gap;
                 }
 
                 // BAR
