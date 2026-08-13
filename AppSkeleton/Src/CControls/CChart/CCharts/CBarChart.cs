@@ -62,6 +62,19 @@ public class CBarChart : BindableObject, IDrawable
 
     private void RequestRedraw() => RedrawRequested?.Invoke();
 
+    // Keeps an "inside the bar" value label within the bar's own vertical extent - the
+    // fixed +15/-12 offsets used to nudge a label in from an edge assume a bar tall
+    // enough to absorb that offset. On a short bar (small-magnitude entry) they'd
+    // otherwise push the label past the bar's far edge and toward the zero-line
+    // splitter on the other side. Too short to offset at all - center on the bar instead.
+    private static float ClampInsideBar(float desiredY, float barTop, float barHeight)
+    {
+        if (barHeight < 16)
+            return barTop + barHeight / 2f;
+
+        return Math.Clamp(desiredY, barTop + 4, barTop + barHeight - 4);
+    }
+
     // -------------------------
     // DRAW
     // -------------------------
@@ -113,6 +126,33 @@ public class CBarChart : BindableObject, IDrawable
 
             float positiveZoneHeight = totalRange > 0 ? height * (maxPositive / totalRange) : height;
             float negativeZoneHeight = height - positiveZoneHeight;
+
+            // A strict value-proportional split can starve the smaller side of a
+            // lopsided pair (e.g. 400 vs -133 gives the negative zone only ~25% of the
+            // height) down to just its bar with no room left for that bar's own value
+            // label - no per-bar fallback can fix a zone that's too thin in the first
+            // place. Guarantee each side that actually has entries at least half the
+            // height (or the full target floor, whichever is less) - capping the floor
+            // at height/2 instead of gating the whole thing behind "is the chart tall
+            // enough for both full floors" means a compact chart still gets an even
+            // 50/50 split rather than silently reverting to the unprotected
+            // proportional split that recreates this exact bug.
+            const float minZoneHeight = 50f;
+            if (maxPositive > 0 && maxNegative > 0)
+            {
+                float minEachSide = Math.Min(minZoneHeight, height / 2f);
+                if (positiveZoneHeight < minEachSide)
+                {
+                    positiveZoneHeight = minEachSide;
+                    negativeZoneHeight = height - positiveZoneHeight;
+                }
+                else if (negativeZoneHeight < minEachSide)
+                {
+                    negativeZoneHeight = minEachSide;
+                    positiveZoneHeight = height - negativeZoneHeight;
+                }
+            }
+
             float baselineY = padding + positiveZoneHeight;
 
             // Floored to 1 only for the division below - positiveZoneHeight/
@@ -138,6 +178,15 @@ public class CBarChart : BindableObject, IDrawable
             const float zeroLineGap = 4f;
             float gap = hasZeroLine ? zeroLineGap : 0f;
 
+            // A bar scaled strictly by value can end up just a few pixels tall next to
+            // a much larger one on the same side, leaving no room for its own value
+            // label to sit above/below it without crowding the zero line. Floor every
+            // non-zero bar to at least this tall (capped by its own zone, so it still
+            // can't spill into the other side) - the same "minimum slice" tradeoff pie
+            // charts make for slivers, trading strict proportionality for a label that
+            // actually fits.
+            const float minBarHeight = 24f;
+
             for (int i = 0; i < count; i++)
             {
                 var entry = Entries[i];
@@ -149,12 +198,16 @@ public class CBarChart : BindableObject, IDrawable
                 {
                     float usableHeight = Math.Max(0, positiveZoneHeight - gap);
                     barHeight = (entry.Value / positiveScale) * usableHeight;
+                    if (entry.Value > 0)
+                        barHeight = Math.Min(usableHeight, Math.Max(barHeight, minBarHeight));
                     y = baselineY - gap - barHeight;
                 }
                 else
                 {
                     float usableHeight = Math.Max(0, negativeZoneHeight - gap);
                     barHeight = (-entry.Value / negativeScale) * usableHeight;
+                    if (entry.Value < 0)
+                        barHeight = Math.Min(usableHeight, Math.Max(barHeight, minBarHeight));
                     y = baselineY + gap;
                 }
 
@@ -174,13 +227,13 @@ public class CBarChart : BindableObject, IDrawable
                 {
                     valueY = y - 12;
                     if (valueY < padding)
-                        valueY = y + 15;
+                        valueY = ClampInsideBar(y + 15, y, barHeight);
                 }
                 else
                 {
                     valueY = y + barHeight + 15;
                     if (valueY > padding + height)
-                        valueY = y + barHeight - 12;
+                        valueY = ClampInsideBar(y + barHeight - 12, y, barHeight);
                 }
 
                 canvas.DrawString(
