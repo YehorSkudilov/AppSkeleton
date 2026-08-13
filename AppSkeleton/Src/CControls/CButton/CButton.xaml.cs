@@ -190,7 +190,11 @@ public partial class CButton : ContentView
     // (PictureSource set) to, in place of the usual icon-font swap - only meaningful
     // once PictureSource is actually set (see Select() below).
     public static readonly BindableProperty SelectedStrokeColorProperty =
-        BindableProperty.Create(nameof(SelectedStrokeColor), typeof(Color), typeof(CButton), Colors.White);
+        BindableProperty.Create(
+            nameof(SelectedStrokeColor),
+            typeof(Color),
+            typeof(CButton),
+            defaultValueCreator: bindable => ((CButton)bindable).CButtonStroke);
 
     public Color SelectedStrokeColor
     {
