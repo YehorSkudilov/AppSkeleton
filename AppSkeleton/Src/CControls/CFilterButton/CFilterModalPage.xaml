@@ -49,13 +49,16 @@
                     <local:CButton
                         Grid.Column="2"
                         Margin="3,0"
+                        CButtonBackgroundColor="Transparent"
+                        CButtonStroke="Transparent"
                         Clicked="OnCloseClicked"
-                        HorizontalOptions="End"
+                        HorizontalOptions="End" 
                         Icon="{Binding Icon, Source={x:Reference Root}}"
                         IconFontFamily="{Binding IconFontFamily, Source={x:Reference Root}}"
-                        IconHeightRequest="20"
+                        IconHeightRequest="18"
                         VerticalOptions="Center"
-                        WidthRequest="20" />
+                        WidthRequest="24" 
+                        HeightRequest="24"/>
                 </Grid>
 
                 <BoxView

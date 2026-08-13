@@ -12,6 +12,8 @@
         Clicked="OnButtonClicked"
         HorizontalOptions="Fill"
         VerticalOptions="Fill"
+        CButtonStroke="Transparent"
+        CButtonBackgroundColor="Transparent"
         Icon="{Binding Icon, Source={x:Reference Root}}"
         IconFontFamily="{Binding IconFontFamily, Source={x:Reference Root}}"
         IconHeightRequest="{Binding IconHeightRequest, Source={x:Reference Root}}"

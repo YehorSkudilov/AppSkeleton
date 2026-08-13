@@ -1,5 +1,15 @@
 namespace AppSkeleton;
 
+// Center (default) fully overlaps Text and the icon/picture, same as every existing
+// CButton usage before this existed - Left/Right lay them out side by side instead, for
+// a button that needs to show both at once (e.g. an icon next to a live count).
+public enum CButtonTextPosition
+{
+    Center,
+    Left,
+    Right
+}
+
 public partial class CButton : ContentView
 {
     public static readonly BindableProperty TextProperty =
@@ -12,6 +22,71 @@ public partial class CButton : ContentView
         set => SetValue(TextProperty, value);
     }
 
+    // ---------------- TEXT POSITION ----------------
+    public static readonly BindableProperty TextPositionProperty =
+        BindableProperty.Create(
+            nameof(TextPosition),
+            typeof(CButtonTextPosition),
+            typeof(CButton),
+            CButtonTextPosition.Center,
+            propertyChanged: OnTextPositionChanged);
+
+    public CButtonTextPosition TextPosition
+    {
+        get => (CButtonTextPosition)GetValue(TextPositionProperty);
+        set => SetValue(TextPositionProperty, value);
+    }
+
+    // Gap between TextLabel and IconStack in CButton.xaml when TextPosition puts them
+    // side by side - irrelevant (and invisible) at the Center default, since both sit
+    // in the same column then.
+    public static readonly BindableProperty IconTextSpacingProperty =
+        BindableProperty.Create(nameof(IconTextSpacing), typeof(double), typeof(CButton), 0.0);
+
+    public double IconTextSpacing
+    {
+        get => (double)GetValue(IconTextSpacingProperty);
+        set => SetValue(IconTextSpacingProperty, value);
+    }
+
+    private static void OnTextPositionChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CButton button)
+        {
+            button.ApplyTextPosition();
+        }
+    }
+
+    // AcrylicTextLabel/AcrylicIconStack/FlatTextLabel/FlatIconStack both default to
+    // Grid.Column 0 (CButton.xaml never sets either explicitly), which is exactly the
+    // old fully-overlapping Center layout - so this only needs to actively move
+    // anything for Left/Right. Applied to both the Acrylic and Flat copies since
+    // either one can end up being the visible one depending on UseAcrylicBackground.
+    private void ApplyTextPosition()
+    {
+        switch (TextPosition)
+        {
+            case CButtonTextPosition.Left:
+                Grid.SetColumn(AcrylicTextLabel, 0);
+                Grid.SetColumn(AcrylicIconStack, 1);
+                Grid.SetColumn(FlatTextLabel, 0);
+                Grid.SetColumn(FlatIconStack, 1);
+                break;
+            case CButtonTextPosition.Right:
+                Grid.SetColumn(AcrylicIconStack, 0);
+                Grid.SetColumn(AcrylicTextLabel, 1);
+                Grid.SetColumn(FlatIconStack, 0);
+                Grid.SetColumn(FlatTextLabel, 1);
+                break;
+            default:
+                Grid.SetColumn(AcrylicTextLabel, 0);
+                Grid.SetColumn(AcrylicIconStack, 0);
+                Grid.SetColumn(FlatTextLabel, 0);
+                Grid.SetColumn(FlatIconStack, 0);
+                break;
+        }
+    }
+
     public static readonly BindableProperty FontSizeProperty =
         BindableProperty.Create(nameof(FontSize), typeof(double), typeof(CButton), 14.0);
 
@@ -19,6 +94,15 @@ public partial class CButton : ContentView
     {
         get => (double)GetValue(FontSizeProperty);
         set => SetValue(FontSizeProperty, value);
+    }
+
+    public static readonly BindableProperty FontAttributesProperty =
+        BindableProperty.Create(nameof(FontAttributes), typeof(FontAttributes), typeof(CButton), FontAttributes.None);
+
+    public FontAttributes FontAttributes
+    {
+        get => (FontAttributes)GetValue(FontAttributesProperty);
+        set => SetValue(FontAttributesProperty, value);
     }
 
     // Defaults to White (not the app's Light/Dark AppThemeBinding) since the app forces
@@ -84,6 +168,52 @@ public partial class CButton : ContentView
         get => (Color)GetValue(IconColorProperty);
         set => SetValue(IconColorProperty, value);
     }
+
+    // ---------------- PICTURE (avatar-style button, e.g. a profile picture instead of
+    // a font-icon glyph) ----------------
+    // Sits inside the same padded content Grid as the icon/text in CButton.xaml, sized
+    // like the icon rather than the outer button bounds - unset, it renders nothing and
+    // the icon glyph shows through as the natural fallback (e.g. before an async
+    // picture fetch resolves); set, it covers that glyph. Deliberately inset by
+    // CButtonPadding like everything else in that Grid, rather than full-bleed, so it
+    // never paints over the button's own border/background.
+    public static readonly BindableProperty PictureSourceProperty =
+        BindableProperty.Create(nameof(PictureSource), typeof(ImageSource), typeof(CButton));
+
+    public ImageSource PictureSource
+    {
+        get => (ImageSource)GetValue(PictureSourceProperty);
+        set => SetValue(PictureSourceProperty, value);
+    }
+
+    // CButtonStroke color/thickness Select(true) switches an avatar-style button
+    // (PictureSource set) to, in place of the usual icon-font swap - only meaningful
+    // once PictureSource is actually set (see Select() below).
+    public static readonly BindableProperty SelectedStrokeColorProperty =
+        BindableProperty.Create(nameof(SelectedStrokeColor), typeof(Color), typeof(CButton), Colors.White);
+
+    public Color SelectedStrokeColor
+    {
+        get => (Color)GetValue(SelectedStrokeColorProperty);
+        set => SetValue(SelectedStrokeColorProperty, value);
+    }
+
+    public static readonly BindableProperty SelectedStrokeThicknessProperty =
+        BindableProperty.Create(nameof(SelectedStrokeThickness), typeof(double), typeof(CButton), 1.0);
+
+    public double SelectedStrokeThickness
+    {
+        get => (double)GetValue(SelectedStrokeThicknessProperty);
+        set => SetValue(SelectedStrokeThicknessProperty, value);
+    }
+
+    // Snapshotted lazily on the first real Select() call (never in the constructor -
+    // a consumer's own CButtonStroke="..." set from its own XAML is applied by the
+    // XAML parser AFTER this control's constructor returns, so capturing it there
+    // would freeze in the wrong, pre-override value) so Select(false) can restore
+    // whatever the button's stroke actually was before it was ever selected.
+    private Color? unselectedStrokeColor;
+    private Thickness? unselectedStrokeThickness;
 
     // ---------------- PADDING ----------------
     // Padding of the button's whole content area (both Text and Icon), inset from the
@@ -170,21 +300,12 @@ public partial class CButton : ContentView
 
 
 
-    public static readonly BindableProperty IsBackgroundVisibleProperty =
-BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButton), true);
-
-    public bool IsBackgroundVisible
-    {
-        get => (bool)GetValue(IsBackgroundVisibleProperty);
-        set => SetValue(IsBackgroundVisibleProperty, value);
-    }
-
     // AcrylicView's blur/measurement machinery is overkill (and, in some layout
     // contexts, buggy - see CFilterModalPage) for a plain small icon button. Set this
     // false to fall back to a flat Border using the same CButtonStroke/
     // CButtonBackgroundColor colors, no blur.
     public static readonly BindableProperty UseAcrylicBackgroundProperty =
-        BindableProperty.Create(nameof(UseAcrylicBackground), typeof(bool), typeof(CButton), true);
+        BindableProperty.Create(nameof(UseAcrylicBackground), typeof(bool), typeof(CButton), false);
 
     public bool UseAcrylicBackground
     {
@@ -222,6 +343,20 @@ BindableProperty.Create(nameof(IsBackgroundVisible), typeof(bool), typeof(CButto
 
     public void Select(bool select)
     {
+        // Gated on PictureSource so this never touches plain icon-glyph buttons (every
+        // CButton calls Select(true) on itself after every tap, in OnTapped below) -
+        // without the guard, tapping ANY icon button anywhere in the app would start
+        // getting a thicker/brighter stroke too.
+        if (PictureSource != null)
+        {
+            unselectedStrokeColor ??= CButtonStroke;
+            unselectedStrokeThickness ??= AcrylicBackground.BorderThickness;
+
+            CButtonStroke = select ? SelectedStrokeColor : unselectedStrokeColor;
+            AcrylicBackground.BorderThickness = select ? new Thickness(SelectedStrokeThickness) : unselectedStrokeThickness.Value;
+            FlatBackground.StrokeThickness = select ? SelectedStrokeThickness : 1;
+        }
+
         if (IsSelectable)
         {
             if (select && SelectedIconFontFamily != null)
