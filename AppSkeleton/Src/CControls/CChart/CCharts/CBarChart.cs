@@ -127,17 +127,29 @@ public class CBarChart : BindableObject, IDrawable
             float positiveZoneHeight = totalRange > 0 ? height * (maxPositive / totalRange) : height;
             float negativeZoneHeight = height - positiveZoneHeight;
 
-            // A strict value-proportional split can starve the smaller side of a
-            // lopsided pair (e.g. 400 vs -133 gives the negative zone only ~25% of the
-            // height) down to just its bar with no room left for that bar's own value
-            // label - no per-bar fallback can fix a zone that's too thin in the first
-            // place. Guarantee each side that actually has entries at least half the
-            // height (or the full target floor, whichever is less) - capping the floor
-            // at height/2 instead of gating the whole thing behind "is the chart tall
-            // enough for both full floors" means a compact chart still gets an even
-            // 50/50 split rather than silently reverting to the unprotected
-            // proportional split that recreates this exact bug.
-            const float minZoneHeight = 50f;
+            // A small gap so bars float off the zero line instead of touching/
+            // overlapping it - only applied when the line is actually drawn (see
+            // hasZeroLine below), so an all-positive (or all-negative) chart still
+            // uses its full zone height right down to the edge like before this
+            // existed.
+            const float zeroLineGap = 4f;
+
+            // A bar scaled strictly by value can end up just a few pixels tall next to
+            // a much larger one on the same side (or its whole zone can, against a much
+            // larger value on the other side of the zero line) - leaving no room for
+            // its own value label without crowding the zero line. Floor every non-zero
+            // bar to at least tall enough to hold its own label text - the same
+            // "minimum slice" tradeoff pie charts make for slivers, trading strict
+            // proportionality for a label that actually fits.
+            const float minBarHeight = 24f;
+
+            // The zone needs to be at least minBarHeight (+ the gap that eats into its
+            // usable space) or the floor above gets clipped straight back down by the
+            // Math.Min against usableHeight. Only bump a zone up to that when it's
+            // actually short of it, and cap the bump at height/2 so a chart too short
+            // for both sides to have it still splits evenly rather than pushing either
+            // side negative.
+            float minZoneHeight = minBarHeight + zeroLineGap;
             if (maxPositive > 0 && maxNegative > 0)
             {
                 float minEachSide = Math.Min(minZoneHeight, height / 2f);
@@ -171,21 +183,7 @@ public class CBarChart : BindableObject, IDrawable
                 canvas.DrawLine(padding, baselineY, padding + width, baselineY);
             }
 
-            // A small gap so bars float off the zero line instead of touching/
-            // overlapping it - only applied when the line is actually drawn, so an
-            // all-positive (or all-negative) chart still uses its full zone height
-            // right down to the edge like before this existed.
-            const float zeroLineGap = 4f;
             float gap = hasZeroLine ? zeroLineGap : 0f;
-
-            // A bar scaled strictly by value can end up just a few pixels tall next to
-            // a much larger one on the same side, leaving no room for its own value
-            // label to sit above/below it without crowding the zero line. Floor every
-            // non-zero bar to at least this tall (capped by its own zone, so it still
-            // can't spill into the other side) - the same "minimum slice" tradeoff pie
-            // charts make for slivers, trading strict proportionality for a label that
-            // actually fits.
-            const float minBarHeight = 24f;
 
             for (int i = 0; i < count; i++)
             {
