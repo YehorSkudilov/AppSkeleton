@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace AppSkeleton;
 
-public partial class CView : ContentView
+public partial class CView : ContentView, ICView
 {
     private CNavItem currentCNavItem;
     public static readonly BindableProperty IsNavigatingProperty =
@@ -32,11 +32,59 @@ public partial class CView : ContentView
         set => SetValue(CNavIconItemsProperty, value);
     }
 
+    // Lets the swipe gesture below drive the same selection path a NavBar tap does
+    // (highlighting included) instead of calling SetContent directly and leaving the
+    // NavBar's selected icon out of sync with what's on screen.
+    public static readonly BindableProperty SwipeNavigationCommandProperty =
+        BindableProperty.Create(
+            nameof(SwipeNavigationCommand),
+            typeof(Command<CNavItem>),
+            typeof(CView),
+            default(Command<CNavItem>));
+
+    public Command<CNavItem> SwipeNavigationCommand
+    {
+        get => (Command<CNavItem>)GetValue(SwipeNavigationCommandProperty);
+        set => SetValue(SwipeNavigationCommandProperty, value);
+    }
+
     const int animSpeed = 300;
+
+    // A plain SwipeGestureRecognizer on MainGrid only ever fires over empty background,
+    // since a MAUI gesture recognizer never gets a look-in once a foreground element -
+    // and especially a scrollable native control (CollectionView/ScrollView) - claims the
+    // touch stream first. CViewHandler instead does the gesture arbitration natively per
+    // platform (Android onInterceptTouchEvent, iOS/MacCatalyst simultaneous-recognition
+    // UIPanGestureRecognizer, Windows handledEventsToo pointer routing) and calls Swipe()
+    // directly once a horizontal drag past DirectionLockRatio/SwipeThreshold completes.
+    internal const double SwipeThreshold = 60;
+    internal const double DirectionLockRatio = 1.5;
+    internal const double TouchSlop = 10;
 
     public CView()
     {
         InitializeComponent();
+    }
+
+    // Swiping left moves forward to the next CNavIconItems entry, swiping right moves
+    // back to the previous one - same ordering CarouselTo already animates along.
+    internal void Swipe(int direction)
+    {
+        if (IsNavigating || currentCNavItem == null || CNavIconItems == null)
+            return;
+
+        int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
+
+        // Not one of the tab pages (e.g. a Settings sub-page) - nothing to carousel to.
+        if (currentIndex < 0)
+            return;
+
+        int targetIndex = currentIndex + direction;
+
+        if (targetIndex < 0 || targetIndex >= CNavIconItems.Count)
+            return;
+
+        SwipeNavigationCommand?.Execute(CNavIconItems[targetIndex]);
     }
 
     public async void SetContent(CNavItem target)
