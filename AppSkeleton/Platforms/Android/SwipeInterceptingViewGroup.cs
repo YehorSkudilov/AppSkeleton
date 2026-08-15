@@ -44,17 +44,39 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
         double h = heightMeasureSpec.ToDouble(context);
         Size size = CrossPlatformMeasure(w, h);
 
-        int measuredWidth = (int)context.ToPixels(size.Width);
-        int measuredHeight = (int)context.ToPixels(size.Height);
+        // Without GetDefaultSize, an Exactly spec (the norm for a Grid cell/`*` row,
+        // e.g. CView's own row in CAppShell) was being ignored in favor of whatever
+        // CrossPlatformMeasure naturally wanted for the current page's content -
+        // shrinking CView (and every page inside it) down to its content's natural
+        // height instead of filling the row it was actually given.
+        double width = GetDefaultSize(widthMeasureSpec.GetMode(), context.FromPixels(SuggestedMinimumWidth), size.Width, w);
+        double height = GetDefaultSize(heightMeasureSpec.GetMode(), context.FromPixels(SuggestedMinimumHeight), size.Height, h);
+
+        int measuredWidth = (int)context.ToPixels(width);
+        int measuredHeight = (int)context.ToPixels(height);
         SetMeasuredDimension(measuredWidth, measuredHeight);
     }
 
+    private static double GetDefaultSize(MeasureSpecMode mode, double minSize, double desiredSize, double constraint)
+    {
+        if (mode == MeasureSpecMode.AtMost)
+            return Math.Min(Math.Max(minSize, desiredSize), constraint);
+        if (mode == MeasureSpecMode.Unspecified)
+            return Math.Max(minSize, desiredSize);
+        return constraint;
+    }
+
+    // Deliberately doesn't call base.OnLayout (matching BorderViewGroup) - FrameLayout's
+    // own onLayout would immediately re-position the content child using ITS OWN
+    // gravity/measured-size rules, clobbering the exact bounds CrossPlatformArrange just
+    // assigned. That's what was actually shrinking every page inside CView vertically:
+    // MainGrid's native view was measured to its natural/unmeasured size by native
+    // FrameLayout layout, not the full row height MAUI's own arrange had just given it.
     protected override void OnLayout(bool changed, int left, int top, int right, int bottom)
     {
         var width = Context.FromPixels(right) - Context.FromPixels(left);
         var height = Context.FromPixels(bottom) - Context.FromPixels(top);
         CrossPlatformArrange?.Invoke(new Rect(0, 0, width, height));
-        base.OnLayout(changed, left, top, right, bottom);
     }
 
     public override bool OnInterceptTouchEvent(MotionEvent? ev)
