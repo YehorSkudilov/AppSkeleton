@@ -302,7 +302,36 @@ public partial class CButton : ContentView
     // ---------------- ACTION (NEW) ----------------
     public event EventHandler? Clicked;
 
+    // How long the Android ripple actually animates for (see AnimateAndroidRippleAsync)
+    // - shared with WaitForRipple below so a caller's wait always matches reality even
+    // if this ever changes.
+    private const int RippleDurationMs = 120;
 
+    // Opt-in delay of Clicked until (a fraction of, see RippleWaitPercentage) the tap
+    // ripple has finished playing - for callers whose Clicked handler immediately
+    // replaces/hides this button (e.g. swapping to another page in place), where firing
+    // Clicked right away visibly cuts the ripple off mid-animation. Off by default since
+    // most Clicked handlers don't touch this button's own visibility.
+    public static readonly BindableProperty WaitForRippleProperty =
+        BindableProperty.Create(nameof(WaitForRipple), typeof(bool), typeof(CButton), false);
+
+    public bool WaitForRipple
+    {
+        get => (bool)GetValue(WaitForRippleProperty);
+        set => SetValue(WaitForRippleProperty, value);
+    }
+
+    // Fraction (0.0-1.0) of RippleDurationMs to actually wait when WaitForRipple is set -
+    // 1.0 (default) waits for the whole ripple; lower it for a snappier feel that still
+    // shows most of the animation.
+    public static readonly BindableProperty RippleWaitPercentageProperty =
+        BindableProperty.Create(nameof(RippleWaitPercentage), typeof(double), typeof(CButton), 1.0);
+
+    public double RippleWaitPercentage
+    {
+        get => (double)GetValue(RippleWaitPercentageProperty);
+        set => SetValue(RippleWaitPercentageProperty, value);
+    }
 
     // AcrylicView's blur/measurement machinery is overkill (and, in some layout
     // contexts, buggy - see CFilterModalPage) for a plain small icon button. Set this
@@ -330,7 +359,7 @@ public partial class CButton : ContentView
     }
 
     // ---------------- TAP HANDLER ----------------
-    private void OnTapped(object sender, TappedEventArgs e)
+    private async void OnTapped(object sender, TappedEventArgs e)
     {
         // Ripple has to start before Clicked runs - Android's RippleDrawable only
         // animates while the view is enabled, and a lot of Clicked handlers (see
@@ -340,6 +369,9 @@ public partial class CButton : ContentView
 #if ANDROID
         _ = AnimateAndroidRippleAsync();
 #endif
+
+        if (WaitForRipple)
+            await Task.Delay((int)(RippleDurationMs * RippleWaitPercentage));
 
         Clicked?.Invoke(this, EventArgs.Empty);
         Select(true);
@@ -454,7 +486,7 @@ public partial class CButton : ContentView
                 return;
 
             nativeView.Pressed = true;
-            await Task.Delay(120);
+            await Task.Delay(RippleDurationMs);
             nativeView.Pressed = false;
         }
         catch (Exception ex)
