@@ -379,19 +379,19 @@ public partial class CButton : ContentView
 
     public void Select(bool select)
     {
-        // Gated on PictureSource so this never touches plain icon-glyph buttons (every
-        // CButton calls Select(true) on itself after every tap, in OnTapped below) -
-        // without the guard, tapping ANY icon button anywhere in the app would start
-        // getting a thicker/brighter stroke too.
-        if (PictureSource != null)
-        {
-            unselectedStrokeColor ??= CButtonStroke;
-            unselectedStrokeThickness ??= AcrylicBackground.BorderThickness;
+        // Every CButton calls Select(true) on itself after every tap (see OnTapped
+        // below), so this only ever visibly changes anything for a button that actually
+        // customizes SelectedStrokeColor/SelectedStrokeThickness away from their
+        // defaults - left at their defaults, SelectedStrokeColor resolves to the
+        // button's own current CButtonStroke and SelectedStrokeThickness (1.0) matches
+        // AcrylicView.BorderThickness's own default, so every reassignment below is a
+        // same-value no-op for any button that hasn't opted in by setting them.
+        unselectedStrokeColor ??= CButtonStroke;
+        unselectedStrokeThickness ??= AcrylicBackground.BorderThickness;
 
-            CButtonStroke = select ? SelectedStrokeColor : unselectedStrokeColor;
-            AcrylicBackground.BorderThickness = select ? new Thickness(SelectedStrokeThickness) : unselectedStrokeThickness.Value;
-            FlatBackground.StrokeThickness = select ? SelectedStrokeThickness : 1;
-        }
+        CButtonStroke = select ? SelectedStrokeColor : unselectedStrokeColor;
+        AcrylicBackground.BorderThickness = select ? new Thickness(SelectedStrokeThickness) : unselectedStrokeThickness.Value;
+        FlatBackground.StrokeThickness = select ? SelectedStrokeThickness : 1;
 
         if (IsSelectable)
         {
