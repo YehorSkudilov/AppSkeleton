@@ -159,6 +159,34 @@ public class CLineChart : BindableObject, IDrawable
         // -------------------------
         // POINTS + LABELS
         // -------------------------
+        // With many points (e.g. GoalsPage's trailing 12 months) drawing every single
+        // x-axis label regardless of available width made adjacent ones overlap.
+        // Points are already evenly spaced by index (stepX is constant), so picking
+        // however many labels fit as evenly-spaced-by-index - rather than greedily
+        // keeping whichever ones happen to clear a minimum pixel gap - keeps the
+        // visual rhythm consistent instead of some gaps reading wider than others.
+        // Always includes the first and last point (the range's actual start/end).
+        const float xLabelFontSize = 12;
+        var labelWidths = Entries.Select(e => canvas.GetStringSize(e.Label ?? "", Microsoft.Maui.Graphics.Font.Default, xLabelFontSize).Width).ToList();
+        var maxLabelWidth = labelWidths.Count > 0 ? labelWidths.Max() : 0;
+        var minSpacing = maxLabelWidth + 6; // small gap so neighboring labels don't touch
+
+        var labelCount = minSpacing > 0 ? Math.Max(2, (int)(width / minSpacing) + 1) : points.Count;
+        labelCount = Math.Min(labelCount, points.Count);
+
+        var shownLabelIndices = new HashSet<int>();
+        for (int k = 0; k < labelCount; k++)
+        {
+            var index = labelCount == 1
+                ? 0
+                : (int)Math.Round(k * (points.Count - 1) / (double)(labelCount - 1));
+            shownLabelIndices.Add(index);
+        }
+
+        // Same clamp the label actually draws at (below) - computed once here so the
+        // draw loop doesn't repeat it.
+        var labelDrawX = points.Select(p => Math.Clamp(p.X, paddingLeft + 10, paddingLeft + width - 10)).ToList();
+
         for (int i = 0; i < points.Count; i++)
         {
             var p = points[i];
@@ -168,7 +196,7 @@ public class CLineChart : BindableObject, IDrawable
             canvas.FillColor = entry.Color ?? Colors.DodgerBlue;
             canvas.FillCircle(p.X, p.Y, 3);
 
-            canvas.FontSize = 12;
+            canvas.FontSize = xLabelFontSize;
 
             // -------------------------
             // VALUE LABEL (above/below point)
@@ -191,7 +219,10 @@ public class CLineChart : BindableObject, IDrawable
             // -------------------------
             // X LABEL (below axis)
             // -------------------------
-            float labelX = Math.Clamp(p.X, paddingLeft + 10, paddingLeft + width - 10);
+            if (!shownLabelIndices.Contains(i))
+                continue;
+
+            float labelX = labelDrawX[i];
             float labelY = axisY + 15;
 
             canvas.FontColor = Colors.White;

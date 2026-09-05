@@ -61,6 +61,15 @@ public partial class CView : ContentView, ICView
     internal const double DirectionLockRatio = 1.5;
     internal const double TouchSlop = 10;
 
+    // The tab CarouselTo's already-running step loop is currently walking towards -
+    // null when nothing is animating. A new Swipe()/SetContent() request while one
+    // step-loop is already in flight just updates this instead of being dropped or
+    // starting a second overlapping loop; the running loop re-reads it every
+    // iteration (see CarouselTo), so it redirects toward the new target as soon as
+    // its current single step finishes, rather than the caller having to wait out
+    // the whole (possibly multi-tab) original animation first.
+    private CNavItem desiredTarget;
+
     public CView()
     {
         InitializeComponent();
@@ -70,10 +79,14 @@ public partial class CView : ContentView, ICView
     // back to the previous one - same ordering CarouselTo already animates along.
     internal void Swipe(int direction)
     {
-        if (IsNavigating || currentCNavItem == null || CNavIconItems == null)
+        if (currentCNavItem == null || CNavIconItems == null)
             return;
 
-        int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
+        // Mid-flight, base the next step off where the carousel is already headed
+        // (not the tab still fading out on screen) so a quick double-swipe chains
+        // forward instead of bouncing back toward the tab it just left.
+        var fromItem = desiredTarget ?? currentCNavItem;
+        int currentIndex = CNavIconItems.IndexOf(fromItem);
 
         // Not one of the tab pages (e.g. a Settings sub-page) - nothing to carousel to.
         if (currentIndex < 0)
@@ -89,11 +102,13 @@ public partial class CView : ContentView, ICView
 
     public async void SetContent(CNavItem target)
     {
-        if (IsNavigating)
-            return;
-
         if (currentCNavItem == null || !CNavIconItems.Contains(currentCNavItem) || !CNavIconItems.Contains(target))
         {
+            // Instant swap (no carousel step to redirect) - only valid with nothing
+            // already animating, since it bypasses the step loop entirely.
+            if (IsNavigating)
+                return;
+
             currentCNavItem = target;
 
             EnsureDetached(currentCNavItem.Content);
@@ -110,17 +125,22 @@ public partial class CView : ContentView, ICView
 
             return;
         }
-        else
-        {
-            if (currentCNavItem == target)
-                return;
 
-            await CarouselTo(target);
-        }
+        if (currentCNavItem == target && desiredTarget == null)
+            return;
 
+        desiredTarget = target;
+
+        // A loop is already running toward (what is now) the old target - it re-reads
+        // desiredTarget every iteration, so updating it above is enough; don't start a
+        // second overlapping CarouselTo.
+        if (IsNavigating)
+            return;
+
+        await CarouselTo();
     }
 
-    private async Task CarouselTo(CNavItem target)
+    private async Task CarouselTo()
     {
         if (IsNavigating)
             return;
@@ -129,25 +149,22 @@ public partial class CView : ContentView, ICView
 
         try
         {
-            int startIndex = CNavIconItems.IndexOf(currentCNavItem);
-            int targetIndex = CNavIconItems.IndexOf(target);
-
-            if (startIndex < 0 || targetIndex < 0)
-                return;
-
-            int totalSteps = Math.Abs(targetIndex - startIndex);
-
-            if (totalSteps == 0)
-                return;
-
             bool isFirstStep = true;
 
-            // Total animation time stays equal to animSpeed
-            uint stepDuration = (uint)Math.Max(1, animSpeed / totalSteps);
-
-            while (currentCNavItem != target)
+            while (currentCNavItem != desiredTarget)
             {
                 int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
+                int targetIndex = CNavIconItems.IndexOf(desiredTarget);
+
+                if (currentIndex < 0 || targetIndex < 0)
+                    return;
+
+                // Recomputed live off the current step, not captured once up front -
+                // a redirect mid-flight changes how many steps actually remain, so the
+                // "total time stays equal to animSpeed" split has to follow whatever
+                // the remaining distance to desiredTarget is right now.
+                int remainingSteps = Math.Abs(targetIndex - currentIndex);
+                uint stepDuration = (uint)Math.Max(1, animSpeed / remainingSteps);
 
                 int direction = Math.Sign(targetIndex - currentIndex);
                 int nextIndex = currentIndex + direction;
@@ -214,6 +231,7 @@ public partial class CView : ContentView, ICView
         finally
         {
             IsNavigating = false;
+            desiredTarget = null;
         }
     }
 

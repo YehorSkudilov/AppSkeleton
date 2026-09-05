@@ -133,9 +133,9 @@ public partial class CNavBar : ContentView
 
     public void SelectItem(CNavItem selectedNavItem)
     {
-        if (IsNavigating)
-            return;
-
+        // No longer blocked while IsNavigating - CView.SetContent now retargets an
+        // already-running carousel step-loop instead of requiring the tap to wait
+        // for the whole (possibly multi-tab) transition to finish first.
         foreach (var navItem in CNavIconItems)
         {
             if(navItem != selectedNavItem)

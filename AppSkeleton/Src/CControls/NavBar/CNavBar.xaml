@@ -26,18 +26,33 @@
 
                 <BindableLayout.ItemTemplate>
                     <DataTemplate>
-                        <Grid Padding="3">
+                        <!--
+                            HeightRequest/WidthRequest on this Grid are what actually
+                            keep every item's slot (and so the spacing between icons)
+                            identical regardless of label length - FlexLayout measures
+                            this Grid at that fixed size. The Label below is NOT nested
+                            inside the Border (MAUI's Border clips content to its rounded
+                            shape) and has no width constraint of its own, so a long name
+                            like "Transactions" renders in full and can visually overflow
+                            past this slot's edge without being clipped or truncated,
+                            and without pushing neighboring items - Grid doesn't clip
+                            children to their cell bounds.
+                        -->
+                        <Grid
+                            WidthRequest="64"
+                            Padding="3"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="1"
+                            VerticalOptions="Center">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.SelectPageCommand}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-                            <Border Padding="10" StrokeThickness="0">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="30" />
-                                </Border.StrokeShape>
+          
                                 <Image
                                     x:Name="Image"
-                                    HeightRequest="30"
-                                    WidthRequest="30">
+                                    HeightRequest="24"
+                                    WidthRequest="24"
+                                    HorizontalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource
                                             FontFamily="{Binding FontFamily}"
@@ -45,7 +60,15 @@
                                             Color="{Binding Color}" />
                                     </Image.Source>
                                 </Image>
-                            </Border>
+                            <Label
+                                Grid.Row="1"
+                                FontSize="8"
+                                HorizontalOptions="Center"
+                                HorizontalTextAlignment="Center"
+                                LineBreakMode="NoWrap"
+                                Text="{Binding PageName}"
+                                TextColor="White"
+                                VerticalOptions="Start" />
                         </Grid>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
