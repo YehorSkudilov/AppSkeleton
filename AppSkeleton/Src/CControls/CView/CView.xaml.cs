@@ -55,49 +55,216 @@ public partial class CView : ContentView, ICView
     // and especially a scrollable native control (CollectionView/ScrollView) - claims the
     // touch stream first. CViewHandler instead does the gesture arbitration natively per
     // platform (Android onInterceptTouchEvent, iOS/MacCatalyst simultaneous-recognition
-    // UIPanGestureRecognizer, Windows handledEventsToo pointer routing) and calls Swipe()
-    // directly once a horizontal drag past DirectionLockRatio/SwipeThreshold completes.
-    internal const double SwipeThreshold = 60;
+    // UIPanGestureRecognizer, Windows handledEventsToo pointer routing) and drives
+    // DragUpdate/DragEnd/DragCancel below directly off the raw pointer stream once a
+    // drag turns out to be horizontal-dominant past DirectionLockRatio/TouchSlop.
     internal const double DirectionLockRatio = 1.5;
     internal const double TouchSlop = 10;
 
     // The tab CarouselTo's already-running step loop is currently walking towards -
-    // null when nothing is animating. A new Swipe()/SetContent() request while one
-    // step-loop is already in flight just updates this instead of being dropped or
-    // starting a second overlapping loop; the running loop re-reads it every
-    // iteration (see CarouselTo), so it redirects toward the new target as soon as
-    // its current single step finishes, rather than the caller having to wait out
-    // the whole (possibly multi-tab) original animation first.
+    // null when nothing is animating. A new SetContent() request while one step-loop
+    // (or a drag - see DragUpdate/DragEnd) is already in flight just updates this
+    // instead of being dropped or starting a second overlapping loop; the running loop
+    // re-reads it every iteration (see CarouselTo), so it redirects toward the new
+    // target as soon as its current single step finishes, rather than the caller
+    // having to wait out the whole (possibly multi-tab) original animation first.
     private CNavItem desiredTarget;
+
+    // ----- finger-driven drag state -----
+    // Set once a horizontal drag actually starts (see DragUpdate) and cleared once it
+    // settles (DragEnd/DragCancel) - lets DragEnd/DragCancel tell a genuine drag apart
+    // from one that never got past the direction-lock decision (e.g. a tap, or a
+    // vertical scroll), and guards DragUpdate against being reached twice for the
+    // same drag.
+    private bool isDragging;
+    private int dragDirection;
+    private double dragWidth;
+    private View dragCurrentView;
+    private View dragNextView;
+    private CNavItem dragNextItem;
 
     public CView()
     {
         InitializeComponent();
     }
 
-    // Swiping left moves forward to the next CNavIconItems entry, swiping right moves
-    // back to the previous one - same ordering CarouselTo already animates along.
-    internal void Swipe(int direction)
+    // Called continuously while a horizontal drag is in progress (see the platform
+    // CViewHandler/SwipeIntercepting* classes), with dx the total horizontal offset in
+    // device-independent units from wherever the finger first went down - negative
+    // means the finger moved left (advancing to the next tab), positive means it moved
+    // right (back to the previous one), same ordering CarouselTo already animates
+    // along. Moves the current page and whichever neighbor the drag is heading toward
+    // 1:1 with the finger instead of only reacting once the drag finishes, so the
+    // transition actually tracks the touch the whole way rather than only kicking off
+    // a fixed-speed animation after the fact.
+    internal void DragUpdate(double dx)
     {
+        // A drag already in progress keeps updating even though it set IsNavigating
+        // itself below - this only blocks *starting* a new drag while some other
+        // navigation (a NavBar tap's CarouselTo) is already animating.
+        if (IsNavigating && !isDragging)
+            return;
+
         if (currentCNavItem == null || CNavIconItems == null)
             return;
 
-        // Mid-flight, base the next step off where the carousel is already headed
-        // (not the tab still fading out on screen) so a quick double-swipe chains
-        // forward instead of bouncing back toward the tab it just left.
-        var fromItem = desiredTarget ?? currentCNavItem;
-        int currentIndex = CNavIconItems.IndexOf(fromItem);
+        if (!isDragging)
+        {
+            int direction = dx < 0 ? 1 : -1;
+            int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
+            if (currentIndex < 0)
+                return;
 
-        // Not one of the tab pages (e.g. a Settings sub-page) - nothing to carousel to.
-        if (currentIndex < 0)
+            int nextIndex = currentIndex + direction;
+
+            // At the first/last tab with nothing further that way - nothing to drag
+            // toward, so leave the page fixed under the finger instead of sliding it
+            // into blank space.
+            if (nextIndex < 0 || nextIndex >= CNavIconItems.Count)
+                return;
+
+            dragWidth = MainGrid.Width > 0 ? MainGrid.Width : 300;
+            dragDirection = direction;
+            dragNextItem = CNavIconItems[nextIndex];
+            dragCurrentView = currentCNavItem.Content;
+            dragNextView = dragNextItem.Content;
+
+            EnsureDetached(dragNextView);
+            dragNextView.TranslationX = dragDirection * dragWidth;
+            MainGrid.Children.Add(dragNextView);
+
+            isDragging = true;
+            IsNavigating = true;
+        }
+
+        // Clamped to one page width each way - past that there's nothing further to
+        // reveal (only the one neighbor above is ever attached), so the drag just
+        // stops moving the pages instead of over-shooting into empty space.
+        double offset = dragDirection > 0
+            ? Math.Clamp(dx, -dragWidth, 0)
+            : Math.Clamp(dx, 0, dragWidth);
+
+        dragCurrentView.TranslationX = offset;
+        dragNextView.TranslationX = dragDirection * dragWidth + offset;
+    }
+
+    // Called once the finger lifts - animates the rest of the way to whichever side
+    // (the page that was already on screen, or the incoming one) the drag was already
+    // closer to when released, instead of snapping through a fixed animation unrelated
+    // to where the release actually happened.
+    internal async void DragEnd(double dx)
+    {
+        if (!isDragging)
             return;
 
-        int targetIndex = currentIndex + direction;
+        isDragging = false;
 
-        if (targetIndex < 0 || targetIndex >= CNavIconItems.Count)
+        var currentView = dragCurrentView;
+        var nextView = dragNextView;
+        var nextItem = dragNextItem;
+        var direction = dragDirection;
+        var width = dragWidth;
+        dragCurrentView = null;
+        dragNextView = null;
+        dragNextItem = null;
+
+        double offset = direction > 0
+            ? Math.Clamp(dx, -width, 0)
+            : Math.Clamp(dx, 0, width);
+
+        bool commit = Math.Abs(offset) > width / 2;
+
+        try
+        {
+            await SettleDragAsync(currentView, nextView, direction, width, offset, commit);
+        }
+        finally
+        {
+            IsNavigating = false;
+        }
+
+        if (commit)
+        {
+            MainGrid.Children.Remove(currentView);
+            currentCNavItem = nextItem;
+        }
+        else
+        {
+            MainGrid.Children.Remove(nextView);
+        }
+
+        // A NavBar tap (or another SetContent call) that arrived mid-drag already ran
+        // its own CAppShell bookkeeping synchronously at tap time and only got as far
+        // as queuing itself in desiredTarget here (SetContent bails out early while
+        // IsNavigating is true) - honor that redirect instead of reporting the drag's
+        // own destination, the same way a redirect mid-CarouselTo takes priority over
+        // whatever intermediate tab the carousel happened to be passing through.
+        if (desiredTarget != null && desiredTarget != currentCNavItem)
+        {
+            await CarouselTo();
+        }
+        else if (commit)
+        {
+            // Fires after currentCNavItem/IsNavigating already reflect the finished
+            // transition, so the CAppShell.SetContent this triggers just runs its
+            // bookkeeping (nav history, Load(), PageName, TopBar refreshes) - its own
+            // early-return sees currentCNavItem already equal to target and skips
+            // starting a second, redundant carousel animation.
+            SwipeNavigationCommand?.Execute(nextItem);
+        }
+    }
+
+    // Bounces back to the page that was already on screen - used when the gesture is
+    // cancelled outright (the OS reclaims the touch stream, the app is backgrounded
+    // mid-drag, ...) rather than released normally, since there's no release position
+    // to judge a "closest side" from at that point.
+    internal async void DragCancel()
+    {
+        if (!isDragging)
             return;
 
-        SwipeNavigationCommand?.Execute(CNavIconItems[targetIndex]);
+        isDragging = false;
+
+        var currentView = dragCurrentView;
+        var nextView = dragNextView;
+        var direction = dragDirection;
+        var width = dragWidth;
+        dragCurrentView = null;
+        dragNextView = null;
+        dragNextItem = null;
+
+        try
+        {
+            await SettleDragAsync(currentView, nextView, direction, width, currentView.TranslationX, commit: false);
+        }
+        finally
+        {
+            IsNavigating = false;
+        }
+
+        MainGrid.Children.Remove(nextView);
+
+        if (desiredTarget != null && desiredTarget != currentCNavItem)
+            await CarouselTo();
+    }
+
+    // Shared tail end of a finger-driven drag - animates from wherever it was released
+    // to a fully-settled 0/±width offset, taking proportionally less time the closer
+    // it already was to that side rather than always replaying the same fixed-speed
+    // animation regardless of how far the finger had already carried it.
+    private static Task SettleDragAsync(View currentView, View nextView, int direction, double width, double offset, bool commit)
+    {
+        double remaining = commit ? width - Math.Abs(offset) : Math.Abs(offset);
+        uint duration = width > 0
+            ? (uint)Math.Clamp(animSpeed * (remaining / width), 1, animSpeed)
+            : (uint)animSpeed;
+
+        double currentTarget = commit ? -direction * width : 0;
+        double nextTarget = commit ? 0 : direction * width;
+
+        return Task.WhenAll(
+            currentView.TranslateTo(currentTarget, 0, duration, Easing.CubicOut),
+            nextView.TranslateTo(nextTarget, 0, duration, Easing.CubicOut));
     }
 
     public async void SetContent(CNavItem target)

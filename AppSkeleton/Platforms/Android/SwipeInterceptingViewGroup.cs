@@ -19,7 +19,11 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
 {
     internal Func<double, double, Size> CrossPlatformMeasure { get; set; }
     internal Func<Rect, Size> CrossPlatformArrange { get; set; }
-    internal Action<int> OnSwipe { get; set; }
+    // dx is reported in device-independent units (already converted from raw pixels),
+    // matching the unit system CView measures/animates its pages in.
+    internal Action<double> OnDragUpdate { get; set; }
+    internal Action<double> OnDragEnd { get; set; }
+    internal Action OnDragCancel { get; set; }
 
     private readonly int touchSlopPx = ViewConfiguration.Get(context).ScaledTouchSlop;
 
@@ -121,21 +125,33 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
 
         switch (ev.Action)
         {
+            // Reported on every move once OnInterceptTouchEvent has decided this drag is
+            // horizontal-dominant, not just once at Up - lets CView.DragUpdate move the
+            // pages 1:1 with the finger in real time instead of only reacting once the
+            // drag finishes.
+            case MotionEventActions.Move:
+                if (intercepting)
+                {
+                    double dx = Context.FromPixels(ev.GetX() - downX);
+                    OnDragUpdate?.Invoke(dx);
+                }
+                break;
+
             case MotionEventActions.Up:
                 if (intercepting)
                 {
-                    float dx = ev.GetX() - downX;
-                    double thresholdPx = Context.ToPixels(CView.SwipeThreshold);
-                    if (Math.Abs(dx) > thresholdPx)
-                    {
-                        OnSwipe?.Invoke(dx < 0 ? 1 : -1);
-                    }
+                    double dx = Context.FromPixels(ev.GetX() - downX);
+                    OnDragEnd?.Invoke(dx);
                 }
                 decided = false;
                 intercepting = false;
                 break;
 
             case MotionEventActions.Cancel:
+                if (intercepting)
+                {
+                    OnDragCancel?.Invoke();
+                }
                 decided = false;
                 intercepting = false;
                 break;

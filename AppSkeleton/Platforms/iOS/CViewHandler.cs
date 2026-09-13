@@ -11,7 +11,9 @@ public partial class CViewHandler : ViewHandler<ICView, SwipeInterceptingView>
         {
             CrossPlatformMeasure = new Func<double, double, Size>(VirtualView.CrossPlatformMeasure),
             CrossPlatformArrange = new Func<Rect, Size>(VirtualView.CrossPlatformArrange),
-            OnSwipe = direction => (VirtualView as CView)?.Swipe(direction),
+            OnDragUpdate = dx => (VirtualView as CView)?.DragUpdate(dx),
+            OnDragEnd = dx => (VirtualView as CView)?.DragEnd(dx),
+            OnDragCancel = () => (VirtualView as CView)?.DragCancel(),
         };
     }
 

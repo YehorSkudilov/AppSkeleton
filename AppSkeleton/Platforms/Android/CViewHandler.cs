@@ -14,7 +14,9 @@ public partial class CViewHandler : ViewHandler<ICView, FrameLayout>
         {
             CrossPlatformMeasure = (w, h) => VirtualView?.CrossPlatformMeasure(w, h) ?? Size.Zero,
             CrossPlatformArrange = (rect) => VirtualView?.CrossPlatformArrange(rect) ?? Size.Zero,
-            OnSwipe = direction => (VirtualView as CView)?.Swipe(direction),
+            OnDragUpdate = dx => (VirtualView as CView)?.DragUpdate(dx),
+            OnDragEnd = dx => (VirtualView as CView)?.DragEnd(dx),
+            OnDragCancel = () => (VirtualView as CView)?.DragCancel(),
         };
 
         return container;

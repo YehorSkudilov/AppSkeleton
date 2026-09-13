@@ -26,6 +26,11 @@ public partial class CViewHandler : ViewHandler<ICView, Grid>
         grid.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnPointerPressed), true);
         grid.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler(OnPointerMoved), true);
         grid.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler(OnPointerReleased), true);
+        // The OS can reclaim the pointer mid-drag (e.g. an edge-swipe system gesture) -
+        // without these, a drag left dangling here would never call CView.DragEnd/
+        // DragCancel, leaving the carousel translated mid-drag forever.
+        grid.AddHandler(UIElement.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled), true);
+        grid.AddHandler(UIElement.PointerCaptureLostEvent, new PointerEventHandler(OnPointerCanceled), true);
 
         return grid;
     }
@@ -37,18 +42,27 @@ public partial class CViewHandler : ViewHandler<ICView, Grid>
         isHorizontal = false;
     }
 
+    // Fires on every move, not just once a threshold is crossed - once direction-lock
+    // decides the drag is horizontal, each subsequent move reports the finger's total
+    // offset so CView.DragUpdate can move the pages 1:1 with it in real time.
     private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
     {
-        if (decided) return;
-
         var point = e.GetCurrentPoint(PlatformView).Position;
         double dx = point.X - downPoint.X;
         double dy = point.Y - downPoint.Y;
 
-        if (Math.Abs(dx) > CView.TouchSlop || Math.Abs(dy) > CView.TouchSlop)
+        if (!decided)
         {
-            decided = true;
-            isHorizontal = Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio;
+            if (Math.Abs(dx) > CView.TouchSlop || Math.Abs(dy) > CView.TouchSlop)
+            {
+                decided = true;
+                isHorizontal = Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio;
+            }
+        }
+
+        if (isHorizontal)
+        {
+            (VirtualView as CView)?.DragUpdate(dx);
         }
     }
 
@@ -58,11 +72,18 @@ public partial class CViewHandler : ViewHandler<ICView, Grid>
         {
             var point = e.GetCurrentPoint(PlatformView).Position;
             double dx = point.X - downPoint.X;
+            (VirtualView as CView)?.DragEnd(dx);
+        }
 
-            if (Math.Abs(dx) > CView.SwipeThreshold)
-            {
-                (VirtualView as CView)?.Swipe(dx < 0 ? 1 : -1);
-            }
+        decided = false;
+        isHorizontal = false;
+    }
+
+    private void OnPointerCanceled(object sender, PointerRoutedEventArgs e)
+    {
+        if (isHorizontal)
+        {
+            (VirtualView as CView)?.DragCancel();
         }
 
         decided = false;

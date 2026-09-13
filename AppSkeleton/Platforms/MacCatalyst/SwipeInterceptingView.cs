@@ -13,9 +13,18 @@ public class SwipeInterceptingView : UIView
 {
     internal Func<double, double, Size> CrossPlatformMeasure { get; set; }
     internal Func<Rect, Size> CrossPlatformArrange { get; set; }
-    internal Action<int> OnSwipe { get; set; }
+    internal Action<double> OnDragUpdate { get; set; }
+    internal Action<double> OnDragEnd { get; set; }
+    internal Action OnDragCancel { get; set; }
 
     private readonly UIPanGestureRecognizer panRecognizer;
+
+    // Direction-lock decision for the drag currently in progress, same idea as the
+    // Android/Windows handlers' own decided/intercepting fields - UIPanGestureRecognizer
+    // reports Changed events from the moment TouchSlop is crossed in any direction, so
+    // this is what tells a horizontal page-swipe apart from an incidental vertical drag.
+    private bool decided;
+    private bool isHorizontal;
 
     public SwipeInterceptingView()
     {
@@ -28,17 +37,53 @@ public class SwipeInterceptingView : UIView
 
     private void HandlePan(UIPanGestureRecognizer recognizer)
     {
-        if (recognizer.State != UIGestureRecognizerState.Ended)
-        {
-            return;
-        }
-
         var translation = recognizer.TranslationInView(this);
 
-        if (Math.Abs(translation.X) > Math.Abs(translation.Y) * CView.DirectionLockRatio &&
-            Math.Abs(translation.X) > CView.SwipeThreshold)
+        switch (recognizer.State)
         {
-            OnSwipe?.Invoke(translation.X < 0 ? 1 : -1);
+            case UIGestureRecognizerState.Began:
+                decided = false;
+                isHorizontal = false;
+                break;
+
+            // Fires on every move, not just once released - once direction-lock decides
+            // the drag is horizontal, each subsequent Changed event reports the
+            // finger's total offset so CView.DragUpdate can move the pages 1:1 with it.
+            case UIGestureRecognizerState.Changed:
+                if (!decided &&
+                    (Math.Abs(translation.X) > CView.TouchSlop || Math.Abs(translation.Y) > CView.TouchSlop))
+                {
+                    decided = true;
+                    isHorizontal = Math.Abs(translation.X) > Math.Abs(translation.Y) * CView.DirectionLockRatio;
+                }
+
+                if (isHorizontal)
+                {
+                    OnDragUpdate?.Invoke(translation.X);
+                }
+                break;
+
+            case UIGestureRecognizerState.Ended:
+                if (isHorizontal)
+                {
+                    OnDragEnd?.Invoke(translation.X);
+                }
+                decided = false;
+                isHorizontal = false;
+                break;
+
+            // The system reclaiming the gesture (e.g. an edge-swipe system gesture, or
+            // the recognizer failing outright) - there's no reliable release position
+            // here, so this always bounces back rather than trying to commit.
+            case UIGestureRecognizerState.Cancelled:
+            case UIGestureRecognizerState.Failed:
+                if (isHorizontal)
+                {
+                    OnDragCancel?.Invoke();
+                }
+                decided = false;
+                isHorizontal = false;
+                break;
         }
     }
 
