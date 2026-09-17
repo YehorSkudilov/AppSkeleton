@@ -15,7 +15,7 @@
                 TintColor="#20ffffff"
             BorderColor="#40ffffff"
                 TintOpacity=".5"
-                CornerRadius="30">
+                CornerRadius="20">
 
         <FlexLayout
                 x:Name="NavBarFlexLayout"
@@ -26,18 +26,7 @@
 
                 <BindableLayout.ItemTemplate>
                     <DataTemplate>
-                        <!--
-                            HeightRequest/WidthRequest on this Grid are what actually
-                            keep every item's slot (and so the spacing between icons)
-                            identical regardless of label length - FlexLayout measures
-                            this Grid at that fixed size. The Label below is NOT nested
-                            inside the Border (MAUI's Border clips content to its rounded
-                            shape) and has no width constraint of its own, so a long name
-                            like "Transactions" renders in full and can visually overflow
-                            past this slot's edge without being clipped or truncated,
-                            and without pushing neighboring items - Grid doesn't clip
-                            children to their cell bounds.
-                        -->
+                      
                         <Grid
                             WidthRequest="64"
                             Padding="3"
