@@ -1,8 +1,10 @@
-﻿namespace AppSkeleton;
+﻿using Microsoft.Maui.Handlers;
+
+namespace AppSkeleton;
 
 public partial class AcrylicViewHandler
 {
-    private static readonly PropertyMapper<IAcrylicView, AcrylicViewHandler> propertyMapper = new()
+    private static readonly PropertyMapper<IAcrylicView, AcrylicViewHandler> propertyMapper = new(ViewHandler.ViewMapper)
     {
         [nameof(IAcrylicView.CornerRadius)] = MapCornerRadius,
         [nameof(IAcrylicView.TintColor)] = MapTintColor,
