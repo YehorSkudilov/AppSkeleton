@@ -83,6 +83,31 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
         CrossPlatformArrange?.Invoke(new Rect(0, 0, width, height));
     }
 
+    // Shared by OnInterceptTouchEvent and OnTouchEvent's own Move handling (see the
+    // comment on OnTouchEvent below for why both need it) - waits for whichever axis is
+    // actually dominant to clear the slop, rather than deciding off whichever axis
+    // happens to cross it first, since a real horizontal swipe rarely moves in a
+    // perfectly straight line and locking the decision in off an incidental few pixels
+    // of vertical jitter (before the horizontal motion itself had even cleared slop yet)
+    // intermittently swallowed otherwise-clean swipes as "not horizontal" for the whole
+    // gesture.
+    private void DecideDirectionIfNeeded(float dx, float dy)
+    {
+        if (decided)
+            return;
+
+        if (Math.Abs(dx) > touchSlopPx && Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio)
+        {
+            decided = true;
+            intercepting = true;
+        }
+        else if (Math.Abs(dy) > touchSlopPx && Math.Abs(dy) > Math.Abs(dx) * CView.DirectionLockRatio)
+        {
+            decided = true;
+            intercepting = false;
+        }
+    }
+
     public override bool OnInterceptTouchEvent(MotionEvent? ev)
     {
         if (ev == null) return intercepting;
@@ -97,30 +122,7 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
                 break;
 
             case MotionEventActions.Move:
-                if (!decided)
-                {
-                    float dx = ev.GetX() - downX;
-                    float dy = ev.GetY() - downY;
-
-                    // Waits for whichever axis is actually dominant to clear the slop,
-                    // rather than deciding off whichever axis happens to cross it
-                    // first - a real horizontal swipe rarely moves in a perfectly
-                    // straight line, and locking the decision in off an incidental
-                    // few pixels of vertical jitter (before the horizontal motion
-                    // itself had even cleared slop yet) intermittently swallowed
-                    // otherwise-clean swipes as "not horizontal" for the whole
-                    // gesture.
-                    if (Math.Abs(dx) > touchSlopPx && Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio)
-                    {
-                        decided = true;
-                        intercepting = true;
-                    }
-                    else if (Math.Abs(dy) > touchSlopPx && Math.Abs(dy) > Math.Abs(dx) * CView.DirectionLockRatio)
-                    {
-                        decided = true;
-                        intercepting = false;
-                    }
-                }
+                DecideDirectionIfNeeded(ev.GetX() - downX, ev.GetY() - downY);
                 break;
 
             case MotionEventActions.Up:
@@ -139,11 +141,25 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
 
         switch (ev.Action)
         {
-            // Reported on every move once OnInterceptTouchEvent has decided this drag is
-            // horizontal-dominant, not just once at Up - lets CView.DragUpdate move the
-            // pages 1:1 with the finger in real time instead of only reacting once the
-            // drag finishes.
+            // Reported on every move once decided/intercepting is true, not just once at
+            // Up - lets CView.DragUpdate move the pages 1:1 with the finger in real time
+            // instead of only reacting once the drag finishes.
+            //
+            // Also re-runs the direction-lock decision itself here, not just in
+            // OnInterceptTouchEvent above: Android only re-invokes onInterceptTouchEvent
+            // on Move/Up if some child actually consumed the initial ACTION_DOWN (i.e.
+            // ViewGroup's own mFirstTouchTarget ends up non-null) - a plain Label (a
+            // non-clickable TextView, which is most of what these pages are built from)
+            // never consumes it, so Android instead routes the whole gesture straight
+            // to this method from the start, WITHOUT ever calling
+            // OnInterceptTouchEvent again. Without this, decided/intercepting stayed
+            // stuck at false for the whole gesture and a swipe starting over any such
+            // element silently never registered. Deciding is idempotent (see
+            // DecideDirectionIfNeeded) so this is a no-op on the normal path where
+            // OnInterceptTouchEvent already decided it.
             case MotionEventActions.Move:
+                DecideDirectionIfNeeded(ev.GetX() - downX, ev.GetY() - downY);
+
                 if (intercepting)
                 {
                     double dx = Context.FromPixels(ev.GetX() - downX);
