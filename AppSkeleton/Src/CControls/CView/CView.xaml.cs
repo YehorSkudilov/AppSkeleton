@@ -191,9 +191,11 @@ public partial class CView : ContentView, ICView
 
     // Attaches (or swaps in) whichever neighbor lies in the given direction from
     // currentCNavItem, detaching whatever neighbor was previously attached for this
-    // drag. Leaves dragNextView null (with dragDirection still updated to the
-    // attempted direction) when there's nothing that way, so DragUpdate knows to
-    // leave the page put until the drag changes its mind again.
+    // drag. Wraps around at either end - swiping backward past the first tab lands on
+    // the last one and vice versa - the same way the tab strip itself has no real
+    // "start"/"end", just wherever CNavIconItems happens to begin. Leaves dragNextView
+    // null (with dragDirection still updated to the attempted direction) only when
+    // there's nowhere at all to go (currentCNavItem missing, or a single-tab list).
     private void SwitchDragNeighbor(int direction)
     {
         if (dragNextView != null)
@@ -203,15 +205,17 @@ public partial class CView : ContentView, ICView
 
         dragDirection = direction;
 
+        int count = CNavIconItems.Count;
         int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
-        int nextIndex = currentIndex + direction;
 
-        if (currentIndex < 0 || nextIndex < 0 || nextIndex >= CNavIconItems.Count)
+        if (currentIndex < 0 || count < 2)
         {
             dragNextView = null;
             dragNextItem = null;
             return;
         }
+
+        int nextIndex = ((currentIndex + direction) % count + count) % count;
 
         dragNextItem = CNavIconItems[nextIndex];
         dragNextView = dragNextItem.Content;
