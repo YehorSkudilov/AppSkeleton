@@ -61,6 +61,17 @@ public partial class CView : ContentView, ICView
     internal const double DirectionLockRatio = 1.5;
     internal const double TouchSlop = 10;
 
+    // A release faster than this (device-independent units/ms) commits or cancels the
+    // swipe off its direction alone - a short, fast flick finishes the gesture even if
+    // the finger barely travelled, the same way a native swipe-back does. Anything
+    // slower falls back to RevertThreshold instead.
+    internal const double FlingVelocityThreshold = 0.5;
+
+    // Below a fling speed, only a release that lands back within this many units of
+    // the start counts as the user having undone the gesture - everything past that
+    // finishes the swipe instead of needing to cross the halfway point.
+    internal const double RevertThreshold = 24;
+
     // The tab CarouselTo's already-running step loop is currently walking towards -
     // null when nothing is animating. A new SetContent() request while one step-loop
     // (or a drag - see DragUpdate/DragEnd) is already in flight just updates this
@@ -82,6 +93,16 @@ public partial class CView : ContentView, ICView
     private View dragCurrentView;
     private View dragNextView;
     private CNavItem dragNextItem;
+
+    // Instantaneous dx velocity (device-independent units/ms), refreshed on every
+    // DragUpdate from the delta against the previous sample - used at release to tell
+    // a short, fast flick apart from a slow drag (see FlingVelocityThreshold). Only
+    // approximates true release velocity (there's usually no further move between the
+    // last DragUpdate and the platform's own DragEnd), which is good enough for this -
+    // a real fling's velocity carries over essentially unchanged in that tiny gap.
+    private double dragVelocity;
+    private double dragLastDx;
+    private long dragLastUpdateTicks;
 
     public CView()
     {
@@ -121,6 +142,21 @@ public partial class CView : ContentView, ICView
 
             isDragging = true;
             IsNavigating = true;
+
+            dragVelocity = 0;
+            dragLastDx = dx;
+            dragLastUpdateTicks = Environment.TickCount64;
+        }
+        else
+        {
+            long now = Environment.TickCount64;
+            long elapsedMs = now - dragLastUpdateTicks;
+
+            if (elapsedMs > 0)
+                dragVelocity = (dx - dragLastDx) / elapsedMs;
+
+            dragLastDx = dx;
+            dragLastUpdateTicks = now;
         }
 
         int desiredDirection = dx < 0 ? 1 : dx > 0 ? -1 : 0;
@@ -201,9 +237,11 @@ public partial class CView : ContentView, ICView
         var nextItem = dragNextItem;
         var direction = dragDirection;
         var width = dragWidth;
+        double velocity = dragVelocity;
         dragCurrentView = null;
         dragNextView = null;
         dragNextItem = null;
+        dragVelocity = 0;
 
         // Released while pinned at an edge with nothing attached to drag toward
         // (see SwitchDragNeighbor) - the page never actually moved, so there's
@@ -222,7 +260,28 @@ public partial class CView : ContentView, ICView
             ? Math.Clamp(dx, -width, 0)
             : Math.Clamp(dx, 0, width);
 
-        bool commit = Math.Abs(offset) > width / 2;
+        // Both normalized so positive always means "further toward finishing the swipe"
+        // regardless of which physical direction that is for this drag.
+        double progress = direction > 0 ? -offset : offset;
+        double normalizedVelocity = direction > 0 ? -velocity : velocity;
+
+        bool commit;
+
+        if (Math.Abs(normalizedVelocity) > FlingVelocityThreshold)
+        {
+            // A short, fast flick - finish (or cancel) the swipe off its direction
+            // alone, the same way a native swipe-back gesture reacts to velocity
+            // instead of final position.
+            commit = normalizedVelocity > 0;
+        }
+        else
+        {
+            // A slow release - only bounce back to the page that was already on screen
+            // once the finger has actually returned it almost to its starting spot;
+            // anywhere past that finishes the swipe instead of needing to clear the
+            // halfway point.
+            commit = progress > RevertThreshold;
+        }
 
         try
         {
