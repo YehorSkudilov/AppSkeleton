@@ -8,7 +8,7 @@
     <Grid
         x:Name="MainGrid"
         Grid.Row="2"
-        HorizontalOptions="Center">
+        HorizontalOptions="Fill">
 
         <local:AcrylicView
                 EffectStyle="Custom"
@@ -21,7 +21,7 @@
                 x:Name="NavBarFlexLayout"
                 BindableLayout.ItemsSource="{Binding CNavIconItems}"
                 Direction="Row"
-                HorizontalOptions="Center"
+                HorizontalOptions="Fill"
                 JustifyContent="SpaceAround">
 
                 <BindableLayout.ItemTemplate>
