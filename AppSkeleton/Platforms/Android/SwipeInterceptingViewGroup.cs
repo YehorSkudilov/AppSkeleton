@@ -1,6 +1,8 @@
 using Android.Content;
 using Android.Views;
 using Android.Widget;
+using AndroidX.Core.Widget;
+using AndroidX.RecyclerView.Widget;
 using Microsoft.Maui.Platform;
 using Rect = Microsoft.Maui.Graphics.Rect;
 using View = Android.Views.View;
@@ -9,28 +11,40 @@ namespace AppSkeleton;
 
 // Hosts CView's content the same way BorderViewGroup hosts AcrylicView's, but also
 // steals the touch stream from a descendant scrollable control (RecyclerView-backed
-// CollectionView, ScrollView, ...) once a drag turns out to be horizontal-dominant.
-// A plain SwipeGestureRecognizer can't do this: once a scrollable child's own
-// onTouchEvent returns true for ACTION_DOWN, it owns the whole gesture stream and a
-// recognizer on an ancestor never sees the MOVE/UP events. Overriding
-// OnInterceptTouchEvent here is the one thing that lets an ancestor reclaim it -
-// exactly how ViewPager/RecyclerView-swipe implementations do this on Android.
+// CollectionView, ScrollView, ...) once a drag turns out to be horizontal-dominant, or
+// vertical-dominant-and-downward while that descendant is already scrolled to its top
+// (a pull-to-refresh gesture). A plain SwipeGestureRecognizer can't do this: once a
+// scrollable child's own onTouchEvent returns true for ACTION_DOWN, it owns the whole
+// gesture stream and a recognizer on an ancestor never sees the MOVE/UP events.
+// Overriding OnInterceptTouchEvent here is the one thing that lets an ancestor reclaim
+// it - exactly how ViewPager/RecyclerView-swipe implementations do this on Android.
 public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
 {
     internal Func<double, double, Size> CrossPlatformMeasure { get; set; }
     internal Func<Rect, Size> CrossPlatformArrange { get; set; }
-    // dx is reported in device-independent units (already converted from raw pixels),
-    // matching the unit system CView measures/animates its pages in.
+    // dx/dy are reported in device-independent units (already converted from raw
+    // pixels), matching the unit system CView measures/animates its pages in.
     internal Action<double> OnDragUpdate { get; set; }
     internal Action<double> OnDragEnd { get; set; }
     internal Action OnDragCancel { get; set; }
+    internal Action<double> OnPullUpdate { get; set; }
+    internal Action<double> OnPullEnd { get; set; }
+    internal Action OnPullCancel { get; set; }
 
     private readonly int touchSlopPx = ViewConfiguration.Get(context).ScaledTouchSlop;
+
+    private enum GestureKind { None, Horizontal, Pull }
 
     private float downX;
     private float downY;
     private bool decided;
-    private bool intercepting;
+    private GestureKind gestureKind;
+
+    // Whether a downward drag starting now would count as pull-to-refresh - computed
+    // once at ACTION_DOWN (see IsAtTop) and held for the rest of this gesture, rather
+    // than re-checked on every move, so a list that scrolls itself away from the top
+    // mid-drag can't retroactively cancel a pull that's already committed to.
+    private bool pullEligibleAtDown;
 
     protected override void OnMeasure(int widthMeasureSpec, int heightMeasureSpec)
     {
@@ -90,7 +104,10 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
     // perfectly straight line and locking the decision in off an incidental few pixels
     // of vertical jitter (before the horizontal motion itself had even cleared slop yet)
     // intermittently swallowed otherwise-clean swipes as "not horizontal" for the whole
-    // gesture.
+    // gesture. A vertical-dominant drag only ever claims the gesture (GestureKind.Pull)
+    // when it's downward and pullEligibleAtDown - otherwise it's left GestureKind.None
+    // so the descendant scrollable (a CollectionView scrolling normally) still gets it,
+    // same as before this gained a third kind.
     private void DecideDirectionIfNeeded(float dx, float dy)
     {
         if (decided)
@@ -99,18 +116,49 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
         if (Math.Abs(dx) > touchSlopPx && Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio)
         {
             decided = true;
-            intercepting = true;
+            gestureKind = GestureKind.Horizontal;
+        }
+        else if (dy > touchSlopPx && dy > Math.Abs(dx) * CView.DirectionLockRatio && pullEligibleAtDown)
+        {
+            decided = true;
+            gestureKind = GestureKind.Pull;
         }
         else if (Math.Abs(dy) > touchSlopPx && Math.Abs(dy) > Math.Abs(dx) * CView.DirectionLockRatio)
         {
             decided = true;
-            intercepting = false;
+            gestureKind = GestureKind.None;
+        }
+    }
+
+    // True when every scrollable descendant (RecyclerView-backed CollectionView,
+    // ScrollView, ...) is already at the top of its content, or there's no scrollable
+    // descendant at all (a page like HomePage with nothing to scroll - the whole page
+    // is fair game to pull from). False the moment any one of them could still scroll
+    // upward, since a downward drag there means "reveal earlier content", not "pull to
+    // refresh".
+    private static bool IsAtTop(View view)
+    {
+        switch (view)
+        {
+            case RecyclerView or Android.Widget.ScrollView or NestedScrollView or Android.Widget.ListView or Android.Widget.GridView:
+                return !view.CanScrollVertically(-1);
+
+            case ViewGroup group:
+                for (int i = 0; i < group.ChildCount; i++)
+                {
+                    if (!IsAtTop(group.GetChildAt(i)))
+                        return false;
+                }
+                return true;
+
+            default:
+                return true;
         }
     }
 
     public override bool OnInterceptTouchEvent(MotionEvent? ev)
     {
-        if (ev == null) return intercepting;
+        if (ev == null) return gestureKind != GestureKind.None;
 
         switch (ev.Action)
         {
@@ -118,7 +166,8 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
                 downX = ev.GetX();
                 downY = ev.GetY();
                 decided = false;
-                intercepting = false;
+                gestureKind = GestureKind.None;
+                pullEligibleAtDown = IsAtTop(this);
                 break;
 
             case MotionEventActions.Move:
@@ -128,11 +177,11 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
             case MotionEventActions.Up:
             case MotionEventActions.Cancel:
                 decided = false;
-                intercepting = false;
+                gestureKind = GestureKind.None;
                 break;
         }
 
-        return intercepting;
+        return gestureKind != GestureKind.None;
     }
 
     public override bool OnTouchEvent(MotionEvent? ev)
@@ -141,9 +190,10 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
 
         switch (ev.Action)
         {
-            // Reported on every move once decided/intercepting is true, not just once at
-            // Up - lets CView.DragUpdate move the pages 1:1 with the finger in real time
-            // instead of only reacting once the drag finishes.
+            // Reported on every move once decided/gestureKind is set, not just once at
+            // Up - lets CView.DragUpdate/PullUpdate move the pages (or the pull
+            // indicator) 1:1 with the finger in real time instead of only reacting once
+            // the drag finishes.
             //
             // Also re-runs the direction-lock decision itself here, not just in
             // OnInterceptTouchEvent above: Android only re-invokes onInterceptTouchEvent
@@ -152,38 +202,52 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
             // non-clickable TextView, which is most of what these pages are built from)
             // never consumes it, so Android instead routes the whole gesture straight
             // to this method from the start, WITHOUT ever calling
-            // OnInterceptTouchEvent again. Without this, decided/intercepting stayed
-            // stuck at false for the whole gesture and a swipe starting over any such
+            // OnInterceptTouchEvent again. Without this, decided/gestureKind stayed
+            // stuck at None for the whole gesture and a swipe starting over any such
             // element silently never registered. Deciding is idempotent (see
             // DecideDirectionIfNeeded) so this is a no-op on the normal path where
             // OnInterceptTouchEvent already decided it.
             case MotionEventActions.Move:
                 DecideDirectionIfNeeded(ev.GetX() - downX, ev.GetY() - downY);
 
-                if (intercepting)
+                if (gestureKind == GestureKind.Horizontal)
                 {
                     double dx = Context.FromPixels(ev.GetX() - downX);
                     OnDragUpdate?.Invoke(dx);
                 }
+                else if (gestureKind == GestureKind.Pull)
+                {
+                    double dy = Context.FromPixels(ev.GetY() - downY);
+                    OnPullUpdate?.Invoke(dy);
+                }
                 break;
 
             case MotionEventActions.Up:
-                if (intercepting)
+                if (gestureKind == GestureKind.Horizontal)
                 {
                     double dx = Context.FromPixels(ev.GetX() - downX);
                     OnDragEnd?.Invoke(dx);
                 }
+                else if (gestureKind == GestureKind.Pull)
+                {
+                    double dy = Context.FromPixels(ev.GetY() - downY);
+                    OnPullEnd?.Invoke(dy);
+                }
                 decided = false;
-                intercepting = false;
+                gestureKind = GestureKind.None;
                 break;
 
             case MotionEventActions.Cancel:
-                if (intercepting)
+                if (gestureKind == GestureKind.Horizontal)
                 {
                     OnDragCancel?.Invoke();
                 }
+                else if (gestureKind == GestureKind.Pull)
+                {
+                    OnPullCancel?.Invoke();
+                }
                 decided = false;
-                intercepting = false;
+                gestureKind = GestureKind.None;
                 break;
         }
 

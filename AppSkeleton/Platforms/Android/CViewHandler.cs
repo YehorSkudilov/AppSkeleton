@@ -17,6 +17,9 @@ public partial class CViewHandler : ViewHandler<ICView, FrameLayout>
             OnDragUpdate = dx => (VirtualView as CView)?.DragUpdate(dx),
             OnDragEnd = dx => (VirtualView as CView)?.DragEnd(dx),
             OnDragCancel = () => (VirtualView as CView)?.DragCancel(),
+            OnPullUpdate = dy => (VirtualView as CView)?.PullUpdate(dy),
+            OnPullEnd = dy => (VirtualView as CView)?.PullEnd(dy),
+            OnPullCancel = () => (VirtualView as CView)?.PullCancel(),
         };
 
         return container;

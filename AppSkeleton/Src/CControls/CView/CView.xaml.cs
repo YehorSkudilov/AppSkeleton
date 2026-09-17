@@ -104,9 +104,69 @@ public partial class CView : ContentView, ICView
     private double dragLastDx;
     private long dragLastUpdateTicks;
 
+    // ----- finger-driven pull-to-refresh state -----
+    // Currently only ever driven from Android (see SwipeInterceptingViewGroup/
+    // CViewHandler there) - Android's SwipeRefreshLayout has its own native spinner
+    // that can't be fully suppressed without a visible flash the moment it decides to
+    // intercept, so pull-to-refresh is instead recognized here, the same way the
+    // horizontal tab-swipe already is, with the native SwipeRefreshLayout disabled
+    // entirely on that platform. Windows/iOS/MacCatalyst still drive pull-to-refresh
+    // through RefreshView directly and never touch any of this.
+    internal const double PullCommitDistance = 64;
+
+    private bool isPulling;
+
+    public event EventHandler<double> PullProgressChanged;
+    public event EventHandler PullCommitted;
+    public event EventHandler PullCancelled;
+
     public CView()
     {
         InitializeComponent();
+    }
+
+    // Called continuously while a vertical pull-to-refresh drag is in progress, with dy
+    // the total vertical offset in device-independent units from wherever the finger
+    // first went down - always >= 0 by construction (the native layer only ever starts
+    // a pull for a downward drag while whatever's on screen is already scrolled to its
+    // top). progress (dy / PullCommitDistance) is what callers drive their own visual
+    // indicator off - 1.0 is "far enough that releasing now would commit".
+    internal void PullUpdate(double dy)
+    {
+        if (IsNavigating && !isPulling)
+            return;
+
+        isPulling = true;
+
+        double progress = Math.Max(0, dy) / PullCommitDistance;
+        PullProgressChanged?.Invoke(this, progress);
+    }
+
+    // Called once the finger lifts - commits or cancels purely off release distance, no
+    // fling shortcut like the horizontal drag has (a pull-to-refresh commit is a
+    // deliberate "far enough", not a flick).
+    internal void PullEnd(double dy)
+    {
+        if (!isPulling)
+            return;
+
+        isPulling = false;
+
+        if (Math.Max(0, dy) >= PullCommitDistance)
+            PullCommitted?.Invoke(this, EventArgs.Empty);
+        else
+            PullCancelled?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Bounces back - used when the gesture is cancelled outright (see DragCancel's own
+    // reasoning) rather than released normally.
+    internal void PullCancel()
+    {
+        if (!isPulling)
+            return;
+
+        isPulling = false;
+        PullCancelled?.Invoke(this, EventArgs.Empty);
     }
 
     // Called continuously while a horizontal drag is in progress (see the platform
