@@ -27,10 +27,14 @@ public partial class CViewHandler : ViewHandler<ICView, Grid>
         grid.AddHandler(UIElement.PointerMovedEvent, new PointerEventHandler(OnPointerMoved), true);
         grid.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler(OnPointerReleased), true);
         // The OS can reclaim the pointer mid-drag (e.g. an edge-swipe system gesture) -
-        // without these, a drag left dangling here would never call CView.DragEnd/
-        // DragCancel, leaving the carousel translated mid-drag forever.
+        // without this, a drag left dangling here would never call CView.DragCancel,
+        // leaving the carousel translated mid-drag forever. Deliberately NOT also
+        // listening for PointerCaptureLost: that one bubbles up from *any* descendant
+        // that captured and released the pointer for its own purposes (e.g. a
+        // ScrollViewer finishing an ordinary touch manipulation), which routinely
+        // happens mid-swipe and was cancelling perfectly good drags that had nothing
+        // to do with losing the touch stream.
         grid.AddHandler(UIElement.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled), true);
-        grid.AddHandler(UIElement.PointerCaptureLostEvent, new PointerEventHandler(OnPointerCanceled), true);
 
         return grid;
     }
@@ -53,10 +57,18 @@ public partial class CViewHandler : ViewHandler<ICView, Grid>
 
         if (!decided)
         {
-            if (Math.Abs(dx) > CView.TouchSlop || Math.Abs(dy) > CView.TouchSlop)
+            // Waits for whichever axis is actually dominant to clear the slop, rather
+            // than deciding off whichever axis happens to cross it first - see the
+            // matching comment in the Android SwipeInterceptingViewGroup.
+            if (Math.Abs(dx) > CView.TouchSlop && Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio)
             {
                 decided = true;
-                isHorizontal = Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio;
+                isHorizontal = true;
+            }
+            else if (Math.Abs(dy) > CView.TouchSlop && Math.Abs(dy) > Math.Abs(dx) * CView.DirectionLockRatio)
+            {
+                decided = true;
+                isHorizontal = false;
             }
         }
 

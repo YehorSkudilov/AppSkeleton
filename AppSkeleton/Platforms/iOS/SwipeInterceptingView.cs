@@ -50,11 +50,23 @@ public class SwipeInterceptingView : UIView
             // the drag is horizontal, each subsequent Changed event reports the
             // finger's total offset so CView.DragUpdate can move the pages 1:1 with it.
             case UIGestureRecognizerState.Changed:
-                if (!decided &&
-                    (Math.Abs(translation.X) > CView.TouchSlop || Math.Abs(translation.Y) > CView.TouchSlop))
+                // Waits for whichever axis is actually dominant to clear the slop,
+                // rather than deciding off whichever axis happens to cross it first -
+                // see the matching comment in the Android SwipeInterceptingViewGroup.
+                if (!decided)
                 {
-                    decided = true;
-                    isHorizontal = Math.Abs(translation.X) > Math.Abs(translation.Y) * CView.DirectionLockRatio;
+                    if (Math.Abs(translation.X) > CView.TouchSlop &&
+                        Math.Abs(translation.X) > Math.Abs(translation.Y) * CView.DirectionLockRatio)
+                    {
+                        decided = true;
+                        isHorizontal = true;
+                    }
+                    else if (Math.Abs(translation.Y) > CView.TouchSlop &&
+                             Math.Abs(translation.Y) > Math.Abs(translation.X) * CView.DirectionLockRatio)
+                    {
+                        decided = true;
+                        isHorizontal = false;
+                    }
                 }
 
                 if (isHorizontal)

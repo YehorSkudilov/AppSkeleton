@@ -110,32 +110,37 @@ public partial class CView : ContentView, ICView
 
         if (!isDragging)
         {
-            int direction = dx < 0 ? 1 : -1;
-            int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
-            if (currentIndex < 0)
-                return;
-
-            int nextIndex = currentIndex + direction;
-
-            // At the first/last tab with nothing further that way - nothing to drag
-            // toward, so leave the page fixed under the finger instead of sliding it
-            // into blank space.
-            if (nextIndex < 0 || nextIndex >= CNavIconItems.Count)
-                return;
-
             dragWidth = MainGrid.Width > 0 ? MainGrid.Width : 300;
-            dragDirection = direction;
-            dragNextItem = CNavIconItems[nextIndex];
             dragCurrentView = currentCNavItem.Content;
-            dragNextView = dragNextItem.Content;
-
-            EnsureDetached(dragNextView);
-            dragNextView.TranslationX = dragDirection * dragWidth;
-            MainGrid.Children.Add(dragNextView);
+            // 0 is a deliberate "no side chosen yet" sentinel (not a real direction) -
+            // guarantees the very first nonzero dx below is treated as a change and
+            // attaches a neighbor via SwitchDragNeighbor.
+            dragDirection = 0;
+            dragNextView = null;
+            dragNextItem = null;
 
             isDragging = true;
             IsNavigating = true;
         }
+
+        int desiredDirection = dx < 0 ? 1 : dx > 0 ? -1 : 0;
+
+        // Lets the drag change its mind mid-gesture (drag toward the next tab, then
+        // without lifting, back past the start and toward the previous one instead)
+        // instead of being stuck with whichever neighbor was chosen first. Only
+        // switches once the current page is actually back at its resting position
+        // (TranslationX ~0) - if it switched while still partway toward the old
+        // neighbor, the page would jump-cut instead of sliding smoothly.
+        if (desiredDirection != 0 && desiredDirection != dragDirection &&
+            (dragNextView == null || Math.Abs(dragCurrentView.TranslationX) < 0.5))
+        {
+            SwitchDragNeighbor(desiredDirection);
+        }
+
+        // At an edge with nothing further that way - leave the page fixed under the
+        // finger instead of sliding it into blank space.
+        if (dragNextView == null)
+            return;
 
         // Clamped to one page width each way - past that there's nothing further to
         // reveal (only the one neighbor above is ever attached), so the drag just
@@ -146,6 +151,38 @@ public partial class CView : ContentView, ICView
 
         dragCurrentView.TranslationX = offset;
         dragNextView.TranslationX = dragDirection * dragWidth + offset;
+    }
+
+    // Attaches (or swaps in) whichever neighbor lies in the given direction from
+    // currentCNavItem, detaching whatever neighbor was previously attached for this
+    // drag. Leaves dragNextView null (with dragDirection still updated to the
+    // attempted direction) when there's nothing that way, so DragUpdate knows to
+    // leave the page put until the drag changes its mind again.
+    private void SwitchDragNeighbor(int direction)
+    {
+        if (dragNextView != null)
+        {
+            MainGrid.Children.Remove(dragNextView);
+        }
+
+        dragDirection = direction;
+
+        int currentIndex = CNavIconItems.IndexOf(currentCNavItem);
+        int nextIndex = currentIndex + direction;
+
+        if (currentIndex < 0 || nextIndex < 0 || nextIndex >= CNavIconItems.Count)
+        {
+            dragNextView = null;
+            dragNextItem = null;
+            return;
+        }
+
+        dragNextItem = CNavIconItems[nextIndex];
+        dragNextView = dragNextItem.Content;
+
+        EnsureDetached(dragNextView);
+        dragNextView.TranslationX = dragDirection * dragWidth;
+        MainGrid.Children.Add(dragNextView);
     }
 
     // Called once the finger lifts - animates the rest of the way to whichever side
@@ -167,6 +204,19 @@ public partial class CView : ContentView, ICView
         dragCurrentView = null;
         dragNextView = null;
         dragNextItem = null;
+
+        // Released while pinned at an edge with nothing attached to drag toward
+        // (see SwitchDragNeighbor) - the page never actually moved, so there's
+        // nothing to settle and no neighbor view to animate.
+        if (nextView == null)
+        {
+            IsNavigating = false;
+
+            if (desiredTarget != null && desiredTarget != currentCNavItem)
+                await CarouselTo();
+
+            return;
+        }
 
         double offset = direction > 0
             ? Math.Clamp(dx, -width, 0)
@@ -232,6 +282,18 @@ public partial class CView : ContentView, ICView
         dragCurrentView = null;
         dragNextView = null;
         dragNextItem = null;
+
+        // Pinned at an edge with nothing attached (see SwitchDragNeighbor) - the page
+        // never moved, so there's nothing to bounce back from.
+        if (nextView == null)
+        {
+            IsNavigating = false;
+
+            if (desiredTarget != null && desiredTarget != currentCNavItem)
+                await CarouselTo();
+
+            return;
+        }
 
         try
         {

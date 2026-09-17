@@ -101,10 +101,24 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
                 {
                     float dx = ev.GetX() - downX;
                     float dy = ev.GetY() - downY;
-                    if (Math.Abs(dx) > touchSlopPx || Math.Abs(dy) > touchSlopPx)
+
+                    // Waits for whichever axis is actually dominant to clear the slop,
+                    // rather than deciding off whichever axis happens to cross it
+                    // first - a real horizontal swipe rarely moves in a perfectly
+                    // straight line, and locking the decision in off an incidental
+                    // few pixels of vertical jitter (before the horizontal motion
+                    // itself had even cleared slop yet) intermittently swallowed
+                    // otherwise-clean swipes as "not horizontal" for the whole
+                    // gesture.
+                    if (Math.Abs(dx) > touchSlopPx && Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio)
                     {
                         decided = true;
-                        intercepting = Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio;
+                        intercepting = true;
+                    }
+                    else if (Math.Abs(dy) > touchSlopPx && Math.Abs(dy) > Math.Abs(dx) * CView.DirectionLockRatio)
+                    {
+                        decided = true;
+                        intercepting = false;
                     }
                 }
                 break;
