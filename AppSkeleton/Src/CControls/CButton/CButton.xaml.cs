@@ -140,9 +140,15 @@ public partial class CButton : ContentView
         set => SetValue(IconProperty, value);
     }
 
+#if WINDOWS
+    const double CButtonIconWHDefault = 15;
+#else
+    const double CButtonIconWHDefault = 24;
+#endif
+
     // ---------------- SIZE ----------------
     public static readonly BindableProperty IconHeightRequestProperty =
-        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CButton), 24.0);
+        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CButton), CButtonIconWHDefault);
 
     public double IconHeightRequest
     {
@@ -151,7 +157,7 @@ public partial class CButton : ContentView
     }
 
     public static readonly BindableProperty IconWidthRequestProperty =
-        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), 24.0);
+        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), CButtonIconWHDefault);
 
     public double IconWidthRequest
     {
