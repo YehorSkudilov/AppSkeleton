@@ -151,7 +151,7 @@ public partial class CButton : ContentView
     }
 
     public static readonly BindableProperty IconWidthRequestProperty =
-        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), 24.0);
+        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), 15.0);
 
     public double IconWidthRequest
     {
@@ -223,7 +223,7 @@ public partial class CButton : ContentView
     // Padding of the button's whole content area (both Text and Icon), inset from the
     // button's actual background edges - not just a margin hack on the icon Image.
     public static readonly BindableProperty CButtonPaddingProperty =
-        BindableProperty.Create(nameof(CButtonPadding), typeof(Thickness), typeof(CButton), new Thickness(0));
+        BindableProperty.Create(nameof(CButtonPadding), typeof(Thickness), typeof(CButton), new Thickness(3));
 
     public Thickness CButtonPadding
     {

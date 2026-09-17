@@ -388,8 +388,8 @@ public partial class CView : ContentView, ICView
         double nextTarget = commit ? 0 : direction * width;
 
         return Task.WhenAll(
-            currentView.TranslateTo(currentTarget, 0, duration, Easing.CubicOut),
-            nextView.TranslateTo(nextTarget, 0, duration, Easing.CubicOut));
+            currentView.TranslateToAsync(currentTarget, 0, duration, Easing.CubicOut),
+            nextView.TranslateToAsync(nextTarget, 0, duration, Easing.CubicOut));
     }
 
     public async void SetContent(CNavItem target)
@@ -500,13 +500,18 @@ public partial class CView : ContentView, ICView
 
                 MainGrid.Children.Add(nextView);
 
-                var currentAnim = currentView.TranslateTo(
+                Debug.WriteLine(
+                    $"[CView] CarouselTo step {currentIndex}->{nextIndex}: width={width}, " +
+                    $"currentView.TranslationX(start)={currentView.TranslationX}, " +
+                    $"nextView.TranslationX(start)={nextView.TranslationX}, stepDuration={stepDuration}");
+
+                var currentAnim = currentView.TranslateToAsync(
                     -direction * width,
                     0,
                     stepDuration,
                     easing);
 
-                var nextAnim = nextView.TranslateTo(
+                var nextAnim = nextView.TranslateToAsync(
                     0,
                     0,
                     stepDuration,
@@ -514,11 +519,27 @@ public partial class CView : ContentView, ICView
 
                 await Task.WhenAll(currentAnim, nextAnim);
 
+                Debug.WriteLine(
+                    $"[CView] CarouselTo step {currentIndex}->{nextIndex} settled: " +
+                    $"currentView.TranslationX(end)={currentView.TranslationX}, " +
+                    $"nextView.TranslationX(end)={nextView.TranslationX}");
+
                 MainGrid.Children.Remove(currentView);
 
                 currentCNavItem = nextItem;
                 isFirstStep = false;
             }
+        }
+        catch (Exception ex)
+        {
+            // CarouselTo runs off SetContent, which is async void - an exception here
+            // would otherwise vanish silently as an unobserved exception (crashing the
+            // app or just getting swallowed depending on platform), leaving whatever
+            // page was mid-transition stuck exactly where it was, with the old page
+            // never removed from MainGrid.Children - logged here so that failure mode
+            // is at least visible instead of a silent stuck/overlapping carousel.
+            Debug.WriteLine($"[CView] CarouselTo failed: {ex}");
+            throw;
         }
         finally
         {
