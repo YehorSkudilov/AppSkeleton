@@ -5,7 +5,7 @@ public class CNavItem : INotifyPropertyChanged
 {
     public string Glyph { get; set; }
     public Color Color { get; set; }
-    public ContentView Content { get; set; }
+    public PageBase Page { get; set; }
     public string PageName { get; set; }
 
     private string fontFamily;

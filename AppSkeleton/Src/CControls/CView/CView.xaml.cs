@@ -192,7 +192,7 @@ public partial class CView : ContentView, ICView
         if (!isDragging)
         {
             dragWidth = MainGrid.Width > 0 ? MainGrid.Width : 300;
-            dragCurrentView = currentCNavItem.Content;
+            dragCurrentView = currentCNavItem.Page;
             // 0 is a deliberate "no side chosen yet" sentinel (not a real direction) -
             // guarantees the very first nonzero dx below is treated as a change and
             // attaches a neighbor via SwitchDragNeighbor.
@@ -278,7 +278,7 @@ public partial class CView : ContentView, ICView
         int nextIndex = ((currentIndex + direction) % count + count) % count;
 
         dragNextItem = CNavIconItems[nextIndex];
-        dragNextView = dragNextItem.Content;
+        dragNextView = dragNextItem.Page;
 
         EnsureDetached(dragNextView);
         dragNextView.TranslationX = dragDirection * dragWidth;
@@ -463,17 +463,17 @@ public partial class CView : ContentView, ICView
 
             currentCNavItem = target;
 
-            EnsureDetached(currentCNavItem.Content);
+            EnsureDetached(currentCNavItem.Page);
 
             // CarouselTo leaves the outgoing view translated off-screen when it removes
             // it (see the TranslateTo calls below) - if that same view later comes back
             // through this instant-swap path instead of another carousel, it'd still
             // carry that stale offset and render invisible. Reset it explicitly.
-            currentCNavItem.Content.TranslationX = 0;
-            currentCNavItem.Content.TranslationY = 0;
+            currentCNavItem.Page.TranslationX = 0;
+            currentCNavItem.Page.TranslationY = 0;
 
             MainGrid.Children.Clear();
-            MainGrid.Add(currentCNavItem.Content);
+            MainGrid.Add(currentCNavItem.Page);
 
             return;
         }
@@ -547,8 +547,8 @@ public partial class CView : ContentView, ICView
 
                 var nextItem = CNavIconItems[nextIndex];
 
-                var currentView = currentCNavItem.Content;
-                var nextView = nextItem.Content;
+                var currentView = currentCNavItem.Page;
+                var nextView = nextItem.Page;
 
                 EnsureDetached(nextView);
 
