@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="AppSkeleton.CDataGrid"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        Same flat #20ffffff/#40ffffff look as CButton's non-acrylic FlatBackground -
+        no AcrylicView here at all, just a plain Border, since a grid full of rows is
+        exactly the case UseAcrylicBackground="False" exists for on CButton (blur is
+        overkill/buggy over a tall scrolling area).
+    -->
+    <Border BackgroundColor="#20ffffff" Stroke="#40ffffff">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="16" />
+        </Border.StrokeShape>
+
+        <!--
+            HeaderStack sits outside the ScrollView (its own fixed Auto row) so the
+            column headers stay pinned in place while only the rows beneath scroll -
+            everything used to live inside RowsStack/the ScrollView together, which
+            meant scrolling took the header with it.
+        -->
+        <Grid RowDefinitions="Auto,*">
+            <VerticalStackLayout x:Name="HeaderStack" Grid.Row="0" />
+
+            <ScrollView Grid.Row="1">
+                <VerticalStackLayout x:Name="RowsStack" />
+            </ScrollView>
+        </Grid>
+    </Border>
+
+</ContentView>
