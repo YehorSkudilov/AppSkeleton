@@ -55,6 +55,11 @@ public partial class CDataGrid : ContentView
     // that row explaining why it wasn't imported.
     public Func<object, string>? OmittedReason { get; set; }
 
+    // Optional - when set, every data row (not the header) gets a TapGestureRecognizer
+    // invoking this with that row's own item, e.g. for a list-to-detail navigation.
+    // Unset (the default) leaves rows exactly as before, no gesture attached.
+    public Action<object>? RowTapped { get; set; }
+
     public CDataGrid()
     {
         InitializeComponent();
@@ -142,6 +147,13 @@ public partial class CDataGrid : ContentView
         var grid = NewRowGrid();
         grid.Padding = new Thickness(12, 10);
         grid.BackgroundColor = omitted ? OmittedRowBackground : Colors.Transparent;
+
+        if (RowTapped != null)
+        {
+            var tap = new TapGestureRecognizer();
+            tap.Tapped += (_, _) => RowTapped(item);
+            grid.GestureRecognizers.Add(tap);
+        }
 
         for (var c = 0; c < Columns.Count; c++)
         {
