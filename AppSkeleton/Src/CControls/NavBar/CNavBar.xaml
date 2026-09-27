@@ -12,10 +12,10 @@
 
         <local:AcrylicView
                 EffectStyle="Custom"
-                TintColor="#20ffffff"
-            BorderColor="#40ffffff"
-                TintOpacity=".5"
-                CornerRadius="20">
+                TintColor="{Binding TintColor}"
+                BorderColor="{Binding BorderColor}"
+                TintOpacity="{Binding TintOpacity}"
+                CornerRadius="{Binding CornerRadius}">
 
         <FlexLayout
                 x:Name="NavBarFlexLayout"
@@ -56,7 +56,7 @@
                                 HorizontalTextAlignment="Center"
                                 LineBreakMode="NoWrap"
                                 Text="{Binding PageName}"
-                                TextColor="White"
+                                TextColor="{Binding Source={x:Reference MainGrid}, Path=BindingContext.LabelColor}"
                                 VerticalOptions="Start" />
                         </Grid>
                     </DataTemplate>

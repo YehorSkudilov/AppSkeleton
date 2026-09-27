@@ -63,6 +63,52 @@ public partial class CNavBar : ContentView
         set => SetValue(SelectedFontFamilyProperty, value);
     }
 
+    // Appearance of the bar's acrylic background and labels. Defaults are the original frosted-white look.
+    public static readonly BindableProperty TintColorProperty =
+        BindableProperty.Create(nameof(TintColor), typeof(Color), typeof(CNavBar), Color.FromArgb("#20ffffff"));
+
+    public Color TintColor
+    {
+        get => (Color)GetValue(TintColorProperty);
+        set => SetValue(TintColorProperty, value);
+    }
+
+    public static readonly BindableProperty TintOpacityProperty =
+        BindableProperty.Create(nameof(TintOpacity), typeof(double), typeof(CNavBar), .5);
+
+    public double TintOpacity
+    {
+        get => (double)GetValue(TintOpacityProperty);
+        set => SetValue(TintOpacityProperty, value);
+    }
+
+    public static readonly BindableProperty BorderColorProperty =
+        BindableProperty.Create(nameof(BorderColor), typeof(Color), typeof(CNavBar), Color.FromArgb("#40ffffff"));
+
+    public Color BorderColor
+    {
+        get => (Color)GetValue(BorderColorProperty);
+        set => SetValue(BorderColorProperty, value);
+    }
+
+    public static readonly BindableProperty CornerRadiusProperty =
+        BindableProperty.Create(nameof(CornerRadius), typeof(Thickness), typeof(CNavBar), new Thickness(20));
+
+    public Thickness CornerRadius
+    {
+        get => (Thickness)GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
+    }
+
+    public static readonly BindableProperty LabelColorProperty =
+        BindableProperty.Create(nameof(LabelColor), typeof(Color), typeof(CNavBar), Colors.White);
+
+    public Color LabelColor
+    {
+        get => (Color)GetValue(LabelColorProperty);
+        set => SetValue(LabelColorProperty, value);
+    }
+
 
     public static readonly BindableProperty LoadPageCommandProperty =
         BindableProperty.Create(
