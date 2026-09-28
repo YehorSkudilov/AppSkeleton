@@ -8,6 +8,7 @@ public static class XeInitializer
     {
         return builder
             .UseAcrylicView()
-            .UseCView();
+            .UseCView()
+            .UseCLabel();
     }
 }
