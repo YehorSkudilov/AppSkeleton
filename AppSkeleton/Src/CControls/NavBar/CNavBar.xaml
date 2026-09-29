@@ -41,7 +41,7 @@
                             <Grid HorizontalOptions="Center" VerticalOptions="Center">
                                 <!-- Optional circle behind the icon, for a prominent item. -->
                                 <Border
-                                    BackgroundColor="{Binding IconBackground}"
+                                    BackgroundColor="{Binding CurrentIconBackground}"
                                     HeightRequest="{Binding IconBackgroundSize}"
                                     IsVisible="{Binding HasIconBackground}"
                                     StrokeShape="RoundRectangle 999"
@@ -56,8 +56,8 @@
                                     <Image.Source>
                                         <FontImageSource
                                             FontFamily="{Binding FontFamily}"
-                                            Glyph="{Binding Glyph}"
-                                            Color="{Binding Color}" />
+                                            Glyph="{Binding CurrentGlyph}"
+                                            Color="{Binding CurrentColor}" />
                                     </Image.Source>
                                 </Image>
                             </Grid>

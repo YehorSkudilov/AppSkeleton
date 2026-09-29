@@ -26,7 +26,24 @@ public class CNavItem : INotifyPropertyChanged
     /// <summary>Whether the name shows under the icon; a large round button often goes without.</summary>
     public bool ShowLabel { get; set; } = true;
 
-    public bool HasIconBackground => IconBackground != null && IconBackgroundSize > 0;
+    public bool HasIconBackground => (IconBackground != null || SelectedIconBackground != null) && IconBackgroundSize > 0;
+
+    // Optional looks for the selected item, so it stands out beyond the filled/outlined font swap (which looks the
+    // same for many icons). Each falls back to the normal one when not set, so items without them are unchanged.
+
+    /// <summary>The icon while selected, e.g. a filled variant.</summary>
+    public string SelectedGlyph { get; set; }
+
+    /// <summary>The icon's colour while selected.</summary>
+    public Color SelectedColor { get; set; }
+
+    /// <summary>The circle behind the icon while selected (with <see cref="IconBackgroundSize"/>).</summary>
+    public Color SelectedIconBackground { get; set; }
+
+    // What the bar shows: the selected look when selected and set, otherwise the normal one.
+    public string CurrentGlyph => IsSelected && !string.IsNullOrEmpty(SelectedGlyph) ? SelectedGlyph : Glyph;
+    public Color CurrentColor => IsSelected && SelectedColor != null ? SelectedColor : Color;
+    public Color CurrentIconBackground => IsSelected && SelectedIconBackground != null ? SelectedIconBackground : IconBackground;
 
     private string fontFamily;
     public string FontFamily
@@ -50,6 +67,9 @@ public class CNavItem : INotifyPropertyChanged
             if (isSelected == value) return;
             isSelected = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(CurrentGlyph));
+            OnPropertyChanged(nameof(CurrentColor));
+            OnPropertyChanged(nameof(CurrentIconBackground));
         }
     }
 

@@ -39,12 +39,45 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, FrameLayout>
             }
         };
 
-        var frame = new FrameLayout(Context);
+        var frame = new ContentSizedFrame(Context) { Content = borderViewGroup };
         frame.AddView(realtimeBlurView);
         frame.AddView(colorBlendLayer);
         frame.AddView(borderViewGroup);
 
         return frame;
+    }
+
+    // A plain FrameLayout sizes itself to its largest child, and the blur and tint layers are plain views that take
+    // all the room they're offered - so an AcrylicView that should hug its content (a pill, a centred card) grew to
+    // fill its whole parent. This measures the content alone, then fits the other layers to it; an exact size from
+    // the parent (e.g. a full-width bar) is still used as given.
+    private sealed class ContentSizedFrame(Android.Content.Context context) : FrameLayout(context)
+    {
+        public View Content { get; set; }
+
+        protected override void OnMeasure(int widthMeasureSpec, int heightMeasureSpec)
+        {
+            if (Content == null)
+            {
+                base.OnMeasure(widthMeasureSpec, heightMeasureSpec);
+                return;
+            }
+
+            Content.Measure(widthMeasureSpec, heightMeasureSpec);
+            var width = MeasureSpec.GetMode(widthMeasureSpec) == Android.Views.MeasureSpecMode.Exactly
+                ? MeasureSpec.GetSize(widthMeasureSpec)
+                : Content.MeasuredWidth;
+            var height = MeasureSpec.GetMode(heightMeasureSpec) == Android.Views.MeasureSpecMode.Exactly
+                ? MeasureSpec.GetSize(heightMeasureSpec)
+                : Content.MeasuredHeight;
+
+            var exactWidth = MeasureSpec.MakeMeasureSpec(width, Android.Views.MeasureSpecMode.Exactly);
+            var exactHeight = MeasureSpec.MakeMeasureSpec(height, Android.Views.MeasureSpecMode.Exactly);
+            for (var i = 0; i < ChildCount; i++)
+                GetChildAt(i)?.Measure(exactWidth, exactHeight);
+
+            SetMeasuredDimension(width, height);
+        }
     }
 
     private void SetContentVisible(bool isVisible)
