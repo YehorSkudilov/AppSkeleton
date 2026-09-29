@@ -27,8 +27,9 @@
                 <BindableLayout.ItemTemplate>
                     <DataTemplate>
                       
+                        <!-- Sizes come from the item (CNavItem.IconSize, ItemWidth, ...); their defaults are the standard look. -->
                         <Grid
-                            WidthRequest="64"
+                            WidthRequest="{Binding ItemWidth}"
                             Padding="3"
                             RowDefinitions="Auto,Auto"
                             RowSpacing="1"
@@ -36,12 +37,22 @@
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding Source={x:Reference MainGrid}, Path=BindingContext.SelectPageCommand}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-          
+
+                            <Grid HorizontalOptions="Center" VerticalOptions="Center">
+                                <!-- Optional circle behind the icon, for a prominent item. -->
+                                <Border
+                                    BackgroundColor="{Binding IconBackground}"
+                                    HeightRequest="{Binding IconBackgroundSize}"
+                                    IsVisible="{Binding HasIconBackground}"
+                                    StrokeShape="RoundRectangle 999"
+                                    StrokeThickness="0"
+                                    WidthRequest="{Binding IconBackgroundSize}" />
                                 <Image
                                     x:Name="Image"
-                                    HeightRequest="24"
-                                    WidthRequest="24"
-                                    HorizontalOptions="Center">
+                                    HeightRequest="{Binding IconSize}"
+                                    WidthRequest="{Binding IconSize}"
+                                    HorizontalOptions="Center"
+                                    VerticalOptions="Center">
                                     <Image.Source>
                                         <FontImageSource
                                             FontFamily="{Binding FontFamily}"
@@ -49,11 +60,13 @@
                                             Color="{Binding Color}" />
                                     </Image.Source>
                                 </Image>
+                            </Grid>
                             <Label
                                 Grid.Row="1"
                                 FontSize="8"
                                 HorizontalOptions="Center"
                                 HorizontalTextAlignment="Center"
+                                IsVisible="{Binding ShowLabel}"
                                 LineBreakMode="NoWrap"
                                 Text="{Binding PageName}"
                                 TextColor="{Binding Source={x:Reference MainGrid}, Path=BindingContext.LabelColor}"
