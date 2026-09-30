@@ -39,12 +39,23 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, Grid>
     {
         if (view.EffectStyle != EffectStyle.Custom) return;
         handler._acrylicBrush.TintColor = view.TintColor.ToWindowsColor();
+        UpdateFallbackColor(handler);
     }
 
     private static void MapTintOpacity(AcrylicViewHandler handler, IAcrylicView view)
     {
         if (view.EffectStyle != EffectStyle.Custom) return;
         handler._acrylicBrush.TintOpacity = view.TintOpacity;
+        UpdateFallbackColor(handler);
+    }
+
+    // What the brush paints when Windows won't render acrylic (energy saver, transparency effects off, high contrast):
+    // the tint as a solid colour, so the view stays a solid shape instead of its default transparent fallback.
+    private static void UpdateFallbackColor(AcrylicViewHandler handler)
+    {
+        var tint = handler._acrylicBrush.TintColor;
+        tint.A = 255;
+        handler._acrylicBrush.FallbackColor = tint;
     }
 
     private static void MapBorderThickness(AcrylicViewHandler handler, IAcrylicView view)
@@ -151,5 +162,7 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, Grid>
                 handler._acrylicBrush.TintOpacity = 0.35;
                 break;
         }
+
+        UpdateFallbackColor(handler);
     }
 }
