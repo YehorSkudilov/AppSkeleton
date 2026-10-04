@@ -17,9 +17,12 @@
                 TintOpacity="{Binding TintOpacity}"
                 CornerRadius="{Binding CornerRadius}">
 
+        <!-- AlignItems Center: left at Stretch, each item fills the bar's height with its icon and label at the top of it,
+             leaving the gap all at the bottom (an item's own VerticalOptions doesn't count in a FlexLayout). -->
         <FlexLayout
                 x:Name="NavBarFlexLayout"
                 BindableLayout.ItemsSource="{Binding CNavIconItems}"
+                AlignItems="Center"
                 Direction="Row"
                 HorizontalOptions="Fill"
                 JustifyContent="SpaceAround">
@@ -53,10 +56,13 @@
                                     WidthRequest="{Binding IconSize}"
                                     HorizontalOptions="Center"
                                     VerticalOptions="Center">
+                                    <!-- Drawn large and scaled down to IconSize, as in CButton: left at its default size,
+                                         Windows draws the glyph as a small bitmap and scales it up, blurry. -->
                                     <Image.Source>
                                         <FontImageSource
                                             FontFamily="{Binding FontFamily}"
                                             Glyph="{Binding CurrentGlyph}"
+                                            Size="100"
                                             Color="{Binding CurrentColor}" />
                                     </Image.Source>
                                 </Image>

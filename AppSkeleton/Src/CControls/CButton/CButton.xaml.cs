@@ -313,6 +313,26 @@ public partial class CButton : ContentView
     // ---------------- ACTION (NEW) ----------------
     public event EventHandler? Clicked;
 
+    // Run on every tap after Clicked, for binding straight to a view model instead of a code-behind handler. Bound
+    // from the page's BindingContext: only MainGrid's BindingContext is this control (see the constructor).
+    public static readonly BindableProperty CommandProperty =
+        BindableProperty.Create(nameof(Command), typeof(System.Windows.Input.ICommand), typeof(CButton));
+
+    public System.Windows.Input.ICommand? Command
+    {
+        get => (System.Windows.Input.ICommand?)GetValue(CommandProperty);
+        set => SetValue(CommandProperty, value);
+    }
+
+    public static readonly BindableProperty CommandParameterProperty =
+        BindableProperty.Create(nameof(CommandParameter), typeof(object), typeof(CButton));
+
+    public object? CommandParameter
+    {
+        get => GetValue(CommandParameterProperty);
+        set => SetValue(CommandParameterProperty, value);
+    }
+
     // How long the Android ripple actually animates for (see AnimateAndroidRippleAsync)
     // - shared with WaitForRipple below so a caller's wait always matches reality even
     // if this ever changes.
@@ -385,6 +405,8 @@ public partial class CButton : ContentView
             await Task.Delay((int)(RippleDurationMs * RippleWaitPercentage));
 
         Clicked?.Invoke(this, EventArgs.Empty);
+        if (Command?.CanExecute(CommandParameter) == true)
+            Command.Execute(CommandParameter);
         Select(true);
     }
 

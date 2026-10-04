@@ -26,7 +26,7 @@
         <Grid ColumnDefinitions="Auto,*,Auto,Auto">
             <Image
                 x:Name="LeadingIcon"
-                Margin="0,0,8,0"
+                Margin="12,0,8,0"
                 HeightRequest="{Binding IconSize, Source={x:Reference Root}}"
                 IsVisible="False"
                 Source="{Binding Icon, Source={x:Reference Root}}"
