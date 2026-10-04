@@ -260,7 +260,7 @@ public partial class CView : ContentView, ICView
     {
         if (dragNextView != null)
         {
-            MainGrid.Children.Remove(dragNextView);
+            Park(dragNextView);
         }
 
         dragDirection = direction;
@@ -280,9 +280,7 @@ public partial class CView : ContentView, ICView
         dragNextItem = CNavIconItems[nextIndex];
         dragNextView = dragNextItem.Page;
 
-        EnsureDetached(dragNextView);
-        dragNextView.TranslationX = dragDirection * dragWidth;
-        MainGrid.Children.Add(dragNextView);
+        Bring(dragNextView, dragDirection * dragWidth);
     }
 
     // Called once the finger lifts - animates the rest of the way to whichever side
@@ -358,12 +356,12 @@ public partial class CView : ContentView, ICView
 
         if (commit)
         {
-            MainGrid.Children.Remove(currentView);
+            Park(currentView);
             currentCNavItem = nextItem;
         }
         else
         {
-            MainGrid.Children.Remove(nextView);
+            Park(nextView);
         }
 
         // A NavBar tap (or another SetContent call) that arrived mid-drag already ran
@@ -427,7 +425,7 @@ public partial class CView : ContentView, ICView
             IsNavigating = false;
         }
 
-        MainGrid.Children.Remove(nextView);
+        Park(nextView);
 
         if (desiredTarget != null && desiredTarget != currentCNavItem)
             await CarouselTo();
@@ -463,17 +461,21 @@ public partial class CView : ContentView, ICView
 
             currentCNavItem = target;
 
-            EnsureDetached(currentCNavItem.Page);
+            // Every other page goes out of view: parked if it's still one of the tabs (see Park), removed if it isn't.
+            foreach (var child in MainGrid.Children.OfType<View>().ToList())
+            {
+                if (child == currentCNavItem.Page)
+                    continue;
+                if (CNavIconItems?.Any(item => item.Page == child) == true)
+                    Park(child);
+                else
+                    MainGrid.Children.Remove(child);
+            }
 
-            // CarouselTo leaves the outgoing view translated off-screen when it removes
-            // it (see the TranslateTo calls below) - if that same view later comes back
-            // through this instant-swap path instead of another carousel, it'd still
-            // carry that stale offset and render invisible. Reset it explicitly.
-            currentCNavItem.Page.TranslationX = 0;
+            // A parked page carries its off-screen offset (and CarouselTo leaves outgoing pages translated away), so
+            // the page shown here is put back at rest explicitly.
             currentCNavItem.Page.TranslationY = 0;
-
-            MainGrid.Children.Clear();
-            MainGrid.Add(currentCNavItem.Page);
+            Bring(currentCNavItem.Page, 0);
 
             return;
         }
@@ -550,15 +552,11 @@ public partial class CView : ContentView, ICView
                 var currentView = currentCNavItem.Page;
                 var nextView = nextItem.Page;
 
-                EnsureDetached(nextView);
-
                 double width = MainGrid.Width;
                 if (width <= 0)
                     width = 300;
 
-                nextView.TranslationX = direction * width;
-
-                MainGrid.Children.Add(nextView);
+                Bring(nextView, direction * width);
 
                 Debug.WriteLine(
                     $"[CView] CarouselTo step {currentIndex}->{nextIndex}: width={width}, " +
@@ -584,7 +582,7 @@ public partial class CView : ContentView, ICView
                     $"currentView.TranslationX(end)={currentView.TranslationX}, " +
                     $"nextView.TranslationX(end)={nextView.TranslationX}");
 
-                MainGrid.Children.Remove(currentView);
+                Park(currentView);
 
                 currentCNavItem = nextItem;
                 isFirstStep = false;
@@ -607,6 +605,24 @@ public partial class CView : ContentView, ICView
             desiredTarget = null;
         }
     }
+
+    // Tab pages stay in MainGrid once they have been shown, parked far off to the side when not in view, instead of
+    // being removed and added again on every switch: re-adding a page re-attached its whole native view tree and laid
+    // it all out again at the start of the slide (for every tab passed through on a multi-tab jump, too), which is what
+    // made switching stutter. Parked off-screen, a page is neither drawn nor hit-tested, and its layout stays cached.
+    private const double Parked = 100000;
+
+    private void Bring(View view, double translationX)
+    {
+        view.TranslationX = translationX;
+        if (view.Parent != MainGrid)
+        {
+            EnsureDetached(view);
+            MainGrid.Children.Add(view);
+        }
+    }
+
+    private static void Park(View view) => view.TranslationX = Parked;
 
     private void EnsureDetached(View view)
     {

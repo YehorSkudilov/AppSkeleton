@@ -146,7 +146,11 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
             case ViewGroup group:
                 for (int i = 0; i < group.ChildCount; i++)
                 {
-                    if (!IsAtTop(group.GetChildAt(i)))
+                    var child = group.GetChildAt(i);
+                    // A tab page CView has parked off to the side (see CView.Park) isn't the one being pulled.
+                    if (child == null || (group.Width > 0 && Math.Abs(child.TranslationX) >= group.Width))
+                        continue;
+                    if (!IsAtTop(child))
                         return false;
                 }
                 return true;

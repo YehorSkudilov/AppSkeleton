@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="AppSkeleton.CInputField"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:this="clr-namespace:AppSkeleton"
+    x:Name="Root"
+    x:DataType="this:CInputField">
+
+    <!--
+        A text field: the box, an optional icon before the text, the input itself, optional content after it (e.g. a
+        busy spinner) and, for a password, a show/hide toggle. Bound to Root rather than taking this control as its
+        BindingContext, so content placed in TrailingContent keeps the page's BindingContext.
+    -->
+    <Border
+        x:Name="Box"
+        Padding="{Binding FieldPadding, Source={x:Reference Root}}"
+        BackgroundColor="{Binding FieldBackgroundColor, Source={x:Reference Root}}"
+        Stroke="{Binding FieldStroke, Source={x:Reference Root}}"
+        StrokeThickness="{Binding FieldStrokeThickness, Source={x:Reference Root}}">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="{Binding CornerRadius, Source={x:Reference Root}}" />
+        </Border.StrokeShape>
+
+        <!--  No ColumnSpacing: the parts beside the input carry their own gap, so a part that's off leaves none  -->
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+            <Image
+                x:Name="LeadingIcon"
+                Margin="0,0,8,0"
+                HeightRequest="{Binding IconSize, Source={x:Reference Root}}"
+                IsVisible="False"
+                Source="{Binding Icon, Source={x:Reference Root}}"
+                VerticalOptions="Center"
+                WidthRequest="{Binding IconSize, Source={x:Reference Root}}" />
+
+            <Grid
+                Grid.Column="1"
+                Padding="{OnPlatform WinUI='-2'}"
+                IsClippedToBounds="True">
+                <Entry
+                    x:Name="Input"
+                    Margin="0"
+                    Completed="OnCompleted"
+                    Text="{Binding Text, Source={x:Reference Root}, Mode=TwoWay}"
+                    TextChanged="OnTextChanged" />
+            </Grid>
+
+            <ContentView
+                x:Name="Trailing"
+                Grid.Column="2"
+                Margin="8,0,0,0"
+                IsVisible="False"
+                VerticalOptions="Center" />
+
+            <this:CButton
+                x:Name="VisibilityToggle"
+                Grid.Column="3"
+                Margin="8,0,8,0"
+                
+                CButtonBackgroundColor="Transparent"
+                CButtonStroke="Transparent"
+                Clicked="OnToggleVisibility"
+                Icon="visibility"
+                IconFontFamily="OutlinedIcons"
+                IsVisible="False"
+                VerticalOptions="Center" />
+        </Grid>
+    </Border>
+
+</ContentView>
