@@ -345,7 +345,7 @@ public class RealtimeBlurView : View
             if (!blurView.IsShown || !blurView.GetGlobalVisibleRect(_visibleRect))
                 return true;
 
-            long now = Environment.TickCount64;
+            long now = System.Environment.TickCount64;
             long since = now - _lastCaptureTicks;
             if (since < MinCaptureIntervalMs)
             {
