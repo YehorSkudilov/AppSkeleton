@@ -80,10 +80,11 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, FrameLayout>
         }
     }
 
+    // Called around each blur capture, so the content isn't blurred into its own background.
     private void SetContentVisible(bool isVisible)
     {
         if (borderViewGroup == null) return;
-        borderViewGroup.Alpha = isVisible ? 1f : 0f;
+        borderViewGroup.SkipDraw = !isVisible;
     }
 
     private static void MapTintColor(AcrylicViewHandler handler, IAcrylicView view)

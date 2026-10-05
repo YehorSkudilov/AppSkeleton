@@ -28,11 +28,24 @@ public class BorderViewGroup(Context context) : FrameLayout(context)
     }
 
     /// <summary>
+    /// Draws nothing while set: how a blur capture leaves this out without invalidating anything (as changing its
+    /// alpha would). Both draw paths check it, since a view group without a background is drawn by DispatchDraw alone.
+    /// </summary>
+    internal bool SkipDraw { get; set; }
+
+    public override void Draw(Canvas canvas)
+    {
+        if (SkipDraw) return;
+        base.Draw(canvas);
+    }
+
+    /// <summary>
     /// 调度绘制
     /// </summary>
     /// <param name="canvas"></param>
     protected override void DispatchDraw(Canvas canvas)
     {
+        if (SkipDraw) return;
         if (borderDrawable != null)
         {
             canvas.ClipPath(borderDrawable.GetClipPath());

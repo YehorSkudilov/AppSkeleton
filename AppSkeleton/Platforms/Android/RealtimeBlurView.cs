@@ -320,7 +320,13 @@ public class RealtimeBlurView : View
             OnPreDraw();
         }
 
-        private int renderCount = 0;
+        // Capturing means drawing everything behind the view in software, every frame something on screen changes - the
+        // costliest thing the app does while scrolling. The blur is wide and tinted, so a capture at most this often
+        // looks the same; a frame skipped for it schedules one later capture, so it still ends on what's behind it now.
+        private const long MinCaptureIntervalMs = 33;
+        private long _lastCaptureTicks;
+        private bool _catchUpPosted;
+        private readonly Android.Graphics.Rect _visibleRect = new();
 
         public bool OnPreDraw()
         {
@@ -332,21 +338,43 @@ public class RealtimeBlurView : View
             // Guard: view dimensions not valid yet — skip this draw pass entirely
             if (blurView.Width <= 0 || blurView.Height <= 0) return true;
 
-            if (renderCount == 2)
+            if (!blurView._isContainerShown)
+                return false;
+
+            // Not on screen (a tab parked off to the side, or scrolled away): nothing to show, so nothing to capture.
+            if (!blurView.IsShown || !blurView.GetGlobalVisibleRect(_visibleRect))
+                return true;
+
+            long now = Environment.TickCount64;
+            long since = now - _lastCaptureTicks;
+            if (since < MinCaptureIntervalMs)
             {
-                renderCount = 0;
+                if (!_catchUpPosted)
+                {
+                    _catchUpPosted = true;
+                    blurView.PostInvalidateDelayed(MinCaptureIntervalMs - since);
+                }
                 return true;
             }
-            renderCount++;
+            _lastCaptureTicks = now;
+            _catchUpPosted = false;
 
+            // Hides the view's own content from the capture. A flag its content checks while drawing, not a change to
+            // its alpha, which would invalidate it and so start another frame (and another capture) every time.
             SetContentVisible(false);
-
-            if (!blurView._isContainerShown)
+            try
             {
-                SetContentVisible(true); // restore before returning
-                return false;
+                Capture(blurView);
             }
+            finally
+            {
+                SetContentVisible(true);
+            }
+            return true;
+        }
 
+        private static void Capture(RealtimeBlurView blurView)
+        {
             var mDecorView = blurView.GetRootView();
             int[] locations = new int[2];
             Bitmap oldBmp = blurView.mBlurredBitmap;
@@ -385,9 +413,6 @@ public class RealtimeBlurView : View
                 if (redrawBitmap || blurView.mDifferentRoot)
                     blurView.Invalidate();
             }
-
-            SetContentVisible(true);
-            return true;
         }
     }
 
