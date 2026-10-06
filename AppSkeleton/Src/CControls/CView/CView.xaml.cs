@@ -624,6 +624,19 @@ public partial class CView : ContentView, ICView
 
     private static void Park(View view) => view.TranslationX = Parked;
 
+    /// <summary>
+    /// Adds a tab's page now, parked off to the side, so its views are made ahead of time: otherwise they're made the
+    /// first time it's brought in, a hitch just as it should start sliding. Does nothing for a page already in.
+    /// </summary>
+    public void Preload(View page)
+    {
+        if (page == null || page.Parent == MainGrid)
+            return;
+        Park(page);
+        EnsureDetached(page);
+        MainGrid.Children.Add(page);
+    }
+
     private void EnsureDetached(View view)
     {
         if (view?.Parent is Layout parent)

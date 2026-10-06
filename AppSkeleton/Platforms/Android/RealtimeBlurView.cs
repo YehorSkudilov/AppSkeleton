@@ -441,6 +441,7 @@ public class RealtimeBlurView : View
     protected override void OnAttachedToWindow()
     {
         base.OnAttachedToWindow();
+        _ancestorsKnown = false;
         var mDecorView = GetRootView();
         if (mDecorView == null)
             SetRootView(GetActivityDecorView());
@@ -450,6 +451,9 @@ public class RealtimeBlurView : View
 
     protected override void OnDetachedFromWindow()
     {
+        _ancestorsKnown = false;
+        _ancestors.Clear();
+        _siblingsBefore.Clear();
         var mDecorView = GetRootView();
         if (mDecorView != null)
             UnsubscribeToPreDraw(mDecorView);
@@ -506,15 +510,9 @@ public class RealtimeBlurView : View
             _blurNode.SetRenderEffect(radius > 0 ? RenderEffect.CreateBlurEffect(radius, radius, Shader.TileMode.Clamp) : null);
         }
 
-        _ancestors.Clear();
-        for (View v = this; v != null; v = v.Parent as View)
-            _ancestors.Add(v);
-        _ancestors.Reverse();
-
+        UpdateAncestors();
         _ancestors[0].GetLocationInWindow(_rootLocation);
         GetLocationInWindow(_location);
-
-
 
         _siblingNodesUsed = 0;
         var canvas = _blurNode.BeginRecording(width, height);
@@ -523,21 +521,16 @@ public class RealtimeBlurView : View
             canvas.Translate(_rootLocation[0] - _location[0], _rootLocation[1] - _location[1]);
             for (int i = 0; i < _ancestors.Count - 1; i++)
             {
-                if (_ancestors[i] is not ViewGroup parent) break;
+                var parent = (ViewGroup)_ancestors[i];
                 var next = _ancestors[i + 1];
                 parent.Background?.Draw(canvas);
                 canvas.Translate(-parent.ScrollX, -parent.ScrollY);
-                for (int j = 0; j < parent.ChildCount; j++)
-                {
-                    var child = parent.GetChildAt(j);
-                    if (child == next) break;
+                foreach (var child in _siblingsBefore[i])
                     if (Overlaps(child))
                         DrawBeneath(canvas, child);
-                }
 
                 canvas.Translate(next.Left, next.Top);
-                var matrix = next.Matrix;
-                if (!matrix.IsIdentity) canvas.Concat(matrix);
+                ApplyTransform(canvas, next);
             }
         }
         finally
@@ -546,12 +539,78 @@ public class RealtimeBlurView : View
         }
     }
 
+    // The way from the root down to this view, and at each step the children drawn before the next one: kept between
+    // recordings, as finding them again went through Java for every view on the way each frame. Made again when this
+    // view is attached or detached (anything on the way moving takes it out of the window) or a step gains or loses
+    // children.
+    private readonly List<List<View>> _siblingsBefore = [];
+    private readonly List<int> _childCounts = [];
+    private bool _ancestorsKnown;
+
+    private void UpdateAncestors()
+    {
+        if (_ancestorsKnown)
+        {
+            int i = 0;
+            for (; i < _childCounts.Count; i++)
+                if (((ViewGroup)_ancestors[i]).ChildCount != _childCounts[i])
+                    break;
+            if (i == _childCounts.Count)
+                return;
+        }
+
+        _ancestors.Clear();
+        for (View v = this; v != null; v = v.Parent as View)
+            _ancestors.Add(v);
+        _ancestors.Reverse();
+
+        _siblingsBefore.Clear();
+        _childCounts.Clear();
+        for (int i = 0; i < _ancestors.Count - 1; i++)
+        {
+            // A view's parent view is always a ViewGroup.
+            var parent = (ViewGroup)_ancestors[i];
+            var next = _ancestors[i + 1];
+            var before = new List<View>();
+            int count = parent.ChildCount;
+            for (int j = 0; j < count; j++)
+            {
+                var child = parent.GetChildAt(j);
+                if (child == next) break;
+                if (child != null) before.Add(child);
+            }
+            _siblingsBefore.Add(before);
+            _childCounts.Add(count);
+        }
+        _ancestorsKnown = true;
+    }
+
+    // A view's own translation, scale and rotation, as its parent applies them. Read as numbers rather than through
+    // its Matrix, which makes a new Java object to hand over every time, unless it's actually scaled or rotated.
+    private static void ApplyTransform(Canvas canvas, View view)
+    {
+        if (view.ScaleX == 1 && view.ScaleY == 1 && view.Rotation == 0 && view.RotationX == 0 && view.RotationY == 0)
+        {
+            float tx = view.TranslationX, ty = view.TranslationY;
+            if (tx != 0 || ty != 0) canvas.Translate(tx, ty);
+            return;
+        }
+        var matrix = view.Matrix;
+        if (!matrix.IsIdentity) canvas.Concat(matrix);
+    }
+
     private readonly int[] _siblingLocation = new int[2];
 
     // Whether the sibling reaches under this view, in window coordinates (_location is this view's, set by RecordBehind).
     private bool Overlaps(View child)
     {
         if (child == null || child.Width <= 0 || child.Height <= 0) return false;
+        // Swapped for another since the way down was found (same number of children): find it again next time.
+        if (!child.IsAttachedToWindow)
+        {
+            _ancestorsKnown = false;
+            return false;
+        }
         child.GetLocationInWindow(_siblingLocation);
         return _siblingLocation[0] < _location[0] + Width && _location[0] < _siblingLocation[0] + child.Width
             && _siblingLocation[1] < _location[1] + Height && _location[1] < _siblingLocation[1] + child.Height;
@@ -589,8 +648,7 @@ public class RealtimeBlurView : View
 
         int save = canvas.Save();
         canvas.Translate(child.Left, child.Top);
-        var matrix = child.Matrix;
-        if (!matrix.IsIdentity) canvas.Concat(matrix);
+        ApplyTransform(canvas, child);
         canvas.DrawRenderNode(node);
         canvas.RestoreToCount(save);
     }
