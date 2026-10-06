@@ -57,6 +57,10 @@ public class RealtimeBlurView : View
 
     protected IBlurImpl GetBlurImpl()
     {
+        // Android 12+ blurs with a RenderEffect instead (UseRenderNode), so RenderScript isn't started there.
+        if (OperatingSystem.IsAndroidVersionAtLeast(31))
+            return new EmptyBlurImpl();
+
         try
         {
             AndroidStockBlurImpl impl = new();
@@ -117,6 +121,7 @@ public class RealtimeBlurView : View
     {
         SetRootView(null);
         ReleaseBitmap();
+        ReleaseBlurNode();
         mBlurImpl?.Release();
     }
 
@@ -345,6 +350,14 @@ public class RealtimeBlurView : View
             if (!blurView.IsShown || !blurView.GetGlobalVisibleRect(_visibleRect))
                 return true;
 
+            // Android 12+: recording only references what's behind (no pixels are drawn here), so it's cheap enough for
+            // every frame and needs neither the throttle nor hiding the content.
+            if (blurView.UseRenderNode)
+            {
+                blurView.RecordBehind();
+                return true;
+            }
+
             long now = System.Environment.TickCount64;
             long since = now - _lastCaptureTicks;
             if (since < MinCaptureIntervalMs)
@@ -455,7 +468,153 @@ public class RealtimeBlurView : View
     protected override void OnDraw(Canvas canvas)
     {
         base.OnDraw(canvas);
-        DrawRoundedBlurredBitmap(canvas, mBlurredBitmap);
+        if (UseRenderNode)
+            DrawRoundedBlurNode(canvas);
+        else
+            DrawRoundedBlurredBitmap(canvas, mBlurredBitmap);
+    }
+
+    // Android 12+ blurs on the GPU: what's behind the view is recorded into a RenderNode and drawn through a blur
+    // RenderEffect. The software capture below it drew the whole window on the main thread for every capture, and its
+    // bitmaps made the render thread upload every image on screen again each frame - most of the app's dropped frames.
+    private bool UseRenderNode => OperatingSystem.IsAndroidVersionAtLeast(31) && IsHardwareAccelerated;
+
+    private RenderNode _blurNode;
+    private float _blurNodeRadius = -1;
+    private Path _clipPath;
+    private readonly List<View> _ancestors = [];
+    private readonly int[] _location = new int[2];
+    private readonly int[] _rootLocation = new int[2];
+
+    // Records only what's drawn beneath this view: going down from the window's root, each ancestor's background and
+    // the siblings before the next one on the way that reach under it (the blur is clipped to the view, so nothing
+    // else shows). Not the whole window, which would hold this view and so draw itself. Each sibling's own drawing is
+    // recorded again every frame, but what's inside it is drawn by reference to its own render nodes.
+    private void RecordBehind()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
+        int width = Width, height = Height;
+        if (width <= 0 || height <= 0) return;
+
+        _blurNode ??= new RenderNode("AcrylicBlur");
+        _blurNode.SetPosition(0, 0, width, height);
+        if (_blurNodeRadius != mBlurRadius)
+        {
+            _blurNodeRadius = mBlurRadius;
+            // About the softness of the software blur at the same setting (it blurred a downsampled copy).
+            float radius = mBlurRadius * 0.72f;
+            _blurNode.SetRenderEffect(radius > 0 ? RenderEffect.CreateBlurEffect(radius, radius, Shader.TileMode.Clamp) : null);
+        }
+
+        _ancestors.Clear();
+        for (View v = this; v != null; v = v.Parent as View)
+            _ancestors.Add(v);
+        _ancestors.Reverse();
+
+        _ancestors[0].GetLocationInWindow(_rootLocation);
+        GetLocationInWindow(_location);
+
+
+
+        _siblingNodesUsed = 0;
+        var canvas = _blurNode.BeginRecording(width, height);
+        try
+        {
+            canvas.Translate(_rootLocation[0] - _location[0], _rootLocation[1] - _location[1]);
+            for (int i = 0; i < _ancestors.Count - 1; i++)
+            {
+                if (_ancestors[i] is not ViewGroup parent) break;
+                var next = _ancestors[i + 1];
+                parent.Background?.Draw(canvas);
+                canvas.Translate(-parent.ScrollX, -parent.ScrollY);
+                for (int j = 0; j < parent.ChildCount; j++)
+                {
+                    var child = parent.GetChildAt(j);
+                    if (child == next) break;
+                    if (Overlaps(child))
+                        DrawBeneath(canvas, child);
+                }
+
+                canvas.Translate(next.Left, next.Top);
+                var matrix = next.Matrix;
+                if (!matrix.IsIdentity) canvas.Concat(matrix);
+            }
+        }
+        finally
+        {
+            _blurNode.EndRecording();
+        }
+    }
+
+    private readonly int[] _siblingLocation = new int[2];
+
+    // Whether the sibling reaches under this view, in window coordinates (_location is this view's, set by RecordBehind).
+    private bool Overlaps(View child)
+    {
+        if (child == null || child.Width <= 0 || child.Height <= 0) return false;
+        child.GetLocationInWindow(_siblingLocation);
+        return _siblingLocation[0] < _location[0] + Width && _location[0] < _siblingLocation[0] + child.Width
+            && _siblingLocation[1] < _location[1] + Height && _location[1] < _siblingLocation[1] + child.Height;
+    }
+
+    // One node per sibling drawn, reused from recording to recording.
+    private readonly List<RenderNode> _siblingNodes = [];
+    private int _siblingNodesUsed;
+
+    // Each sibling gets a canvas of its own size, as its parent would give it: some views size what they draw by the
+    // canvas (a MAUI Border's clip does).
+    private void DrawBeneath(Canvas canvas, View child)
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
+        if (child == null || child.Visibility != ViewStates.Visible || child.Alpha <= 0f || child.Width <= 0 || child.Height <= 0)
+            return;
+
+        if (_siblingNodesUsed == _siblingNodes.Count)
+            _siblingNodes.Add(new RenderNode("AcrylicBlurSibling"));
+        var node = _siblingNodes[_siblingNodesUsed++];
+        node.SetPosition(0, 0, child.Width, child.Height);
+        node.SetAlpha(child.Alpha);
+
+        var childCanvas = node.BeginRecording(child.Width, child.Height);
+        try
+        {
+            // The content scrolled, the background (which View.Draw offsets back) not.
+            childCanvas.Translate(-child.ScrollX, -child.ScrollY);
+            child.Draw(childCanvas);
+        }
+        finally
+        {
+            node.EndRecording();
+        }
+
+        int save = canvas.Save();
+        canvas.Translate(child.Left, child.Top);
+        var matrix = child.Matrix;
+        if (!matrix.IsIdentity) canvas.Concat(matrix);
+        canvas.DrawRenderNode(node);
+        canvas.RestoreToCount(save);
+    }
+
+    private void DrawRoundedBlurNode(Canvas canvas)
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
+        if (_blurNode == null || !_blurNode.HasDisplayList || !canvas.IsHardwareAccelerated) return;
+
+        _clipPath ??= new Path();
+        _clipPath.Reset();
+        _clipPath.AddRoundRect(0, 0, Width, Height, mRadii, Path.Direction.Cw);
+        int save = canvas.Save();
+        canvas.ClipPath(_clipPath);
+        canvas.DrawRenderNode(_blurNode);
+        canvas.RestoreToCount(save);
+    }
+
+    private void ReleaseBlurNode()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
+        _blurNode?.DiscardDisplayList();
+        foreach (var node in _siblingNodes)
+            node.DiscardDisplayList();
     }
 
     private void DrawRoundedBlurredBitmap(Canvas canvas, Bitmap blurredBitmap)
