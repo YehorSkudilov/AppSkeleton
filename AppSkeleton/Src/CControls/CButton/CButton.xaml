@@ -5,10 +5,143 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:AppSkeleton">
 
+    <!--
+        Only one of the two looks below is ever built (see BuildBackground in the code-behind) - both used to be
+        built for every button with one hidden, which doubled every button's views (blur view included), most of
+        them in list templates. The icon glyphs render at the size they're shown at, not at 100 and scaled down:
+        each one was a bitmap many times bigger than what's on screen.
+    -->
     <ContentView.Resources>
         <ResourceDictionary>
-            <local:InverseBoolConverter x:Key="InverseBoolConverter" />
             <local:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+
+            <DataTemplate x:Key="AcrylicTemplate">
+                <local:AcrylicView
+                    x:Name="Background"
+                    BorderColor="{Binding CButtonStroke}"
+                    CornerRadius="{Binding CornerRadius}"
+                    EffectStyle="Custom"
+                    TintColor="{Binding CButtonBackgroundColor}"
+                    TintOpacity=".5">
+
+                    <Grid x:Name="ContentGrid">
+
+                        <Grid
+                            Padding="{Binding CButtonPadding}"
+                            ColumnDefinitions="Auto,Auto"
+                            ColumnSpacing="{Binding IconTextSpacing}"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center">
+                            <Label
+                                x:Name="TextLabel"
+                                FontAttributes="{Binding FontAttributes}"
+                                FontSize="{Binding FontSize}"
+                                HorizontalOptions="Center"
+                                IsVisible="{Binding Text, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                MinimumHeightRequest="0"
+                                Text="{Binding Text}"
+                                TextColor="{Binding TextColor}"
+                                VerticalOptions="Center" />
+
+                            <Grid
+                                x:Name="IconStack"
+                                HorizontalOptions="Center"
+                                IsVisible="{Binding Icon, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                VerticalOptions="Center">
+                                <Image
+                                    HeightRequest="{Binding IconHeightRequest}"
+                                    HorizontalOptions="Center"
+                                    MinimumHeightRequest="0"
+                                    MinimumWidthRequest="0"
+                                    VerticalOptions="Center"
+                                    WidthRequest="{Binding IconWidthRequest}">
+                                    <Image.Source>
+                                        <FontImageSource
+                                            FontFamily="{Binding CurrentFontFamily}"
+                                            Glyph="{Binding Icon}"
+                                            Size="{Binding IconRenderSize}"
+                                            Color="{Binding IconColor}" />
+                                    </Image.Source>
+                                </Image>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+
+                </local:AcrylicView>
+            </DataTemplate>
+
+            <DataTemplate x:Key="FlatTemplate">
+                <Border
+                    x:Name="Background"
+                    BackgroundColor="{Binding CButtonBackgroundColor}"
+                    Stroke="{Binding CButtonStroke}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="{Binding CornerRadius}" />
+                    </Border.StrokeShape>
+
+                    <Grid x:Name="ContentGrid">
+                        <HorizontalStackLayout
+                            Padding="{Binding CButtonPadding}"
+                            HorizontalOptions="Center"
+                            Spacing="{Binding IconTextSpacing}"
+                            VerticalOptions="Center">
+                            <Label
+                                x:Name="TextLabel"
+                                FontAttributes="{Binding FontAttributes}"
+                                FontSize="{Binding FontSize}"
+                                HorizontalOptions="Center"
+                                IsVisible="{Binding Text, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                MinimumHeightRequest="0"
+                                Text="{Binding Text}"
+                                TextColor="{Binding TextColor}"
+                                VerticalOptions="Center" />
+
+                            <Grid
+                                x:Name="IconStack"
+                                HorizontalOptions="Center"
+                                IsVisible="{Binding Icon, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                VerticalOptions="Center">
+                                <Image
+                                    HeightRequest="{Binding IconHeightRequest}"
+                                    HorizontalOptions="Center"
+                                    MinimumHeightRequest="0"
+                                    MinimumWidthRequest="0"
+                                    VerticalOptions="Center"
+                                    WidthRequest="{Binding IconWidthRequest}">
+                                    <Image.Source>
+                                        <FontImageSource
+                                            FontFamily="{Binding CurrentFontFamily}"
+                                            Glyph="{Binding Icon}"
+                                            Size="{Binding IconRenderSize}"
+                                            Color="{Binding IconColor}" />
+                                    </Image.Source>
+                                </Image>
+                            </Grid>
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+            <!--
+                Avatar-style picture (e.g. a profile picture) instead of a font-icon glyph - only added (see
+                UpdatePicture) once PictureSource is set, where it covers the glyph, being later in ContentGrid.
+                Sits alongside the text/icon rather than inside it, so it fills the whole content area - IconHeight/
+                WidthRequest only size the glyph. CButtonPadding is reused as its Margin so callers keep the same inset
+                knob, rather than a full-bleed picture painting over the button's own border/background. Selection
+                highlight for this case is the button's own CButtonStroke/thickness (see Select()).
+            -->
+            <DataTemplate x:Key="PictureTemplate">
+                <Border
+                    Margin="{Binding CButtonPadding}"
+                    HorizontalOptions="Fill"
+                    StrokeThickness="0"
+                    VerticalOptions="Fill">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="999" />
+                    </Border.StrokeShape>
+                    <Image Aspect="AspectFill" Source="{Binding PictureSource}" />
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </ContentView.Resources>
 
@@ -17,149 +150,6 @@
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnTapped" />
         </Grid.GestureRecognizers>
-
-        <local:AcrylicView
-            x:Name="AcrylicBackground"
-            BorderColor="{Binding CButtonStroke}"
-            CornerRadius="{Binding CornerRadius}"
-            EffectStyle="Custom"
-            IsVisible="{Binding UseAcrylicBackground}"
-            TintColor="{Binding CButtonBackgroundColor}"
-            TintOpacity=".5">
-
-            <Grid>
-
-                <Grid
-                    Padding="{Binding CButtonPadding}"
-                    ColumnDefinitions="Auto,Auto"
-                    ColumnSpacing="{Binding IconTextSpacing}"
-                    HorizontalOptions="Center"
-                    VerticalOptions="Center">
-                    <Label
-                        x:Name="AcrylicTextLabel"
-                        FontAttributes="{Binding FontAttributes}"
-                        FontSize="{Binding FontSize}"
-                        HorizontalOptions="Center"
-                        IsVisible="{Binding Text, Converter={StaticResource IsNotNullOrEmptyConverter}}"
-                        MinimumHeightRequest="0"
-                        Text="{Binding Text}"
-                        TextColor="{Binding TextColor}"
-                        VerticalOptions="Center" />
-
-                    <Grid
-                        x:Name="AcrylicIconStack"
-                        HorizontalOptions="Center"
-                        IsVisible="{Binding Icon, Converter={StaticResource IsNotNullOrEmptyConverter}}"
-                        VerticalOptions="Center">
-                        <Image
-                            HeightRequest="{Binding IconHeightRequest}"
-                            HorizontalOptions="Center"
-                            MinimumHeightRequest="0"
-                            MinimumWidthRequest="0"
-                            VerticalOptions="Center"
-                            WidthRequest="{Binding IconWidthRequest}">
-                            <Image.Source>
-                                <FontImageSource
-                                    FontFamily="{Binding CurrentFontFamily}"
-                                    Glyph="{Binding Icon}"
-                                    Size="100"
-                                    Color="{Binding IconColor}" />
-                            </Image.Source>
-                        </Image>
-                    </Grid>
-                </Grid>
-
-                <!--
-                    Avatar-style picture (e.g. a profile picture) instead of a font-icon
-                    glyph - unset (PictureSource null), this renders nothing and the
-                    icon Image above shows through untouched; set, it covers that
-                    glyph, since it's later in this Grid (higher z-order). Sits
-                    alongside the text/icon Grid rather than inside it, so it fills
-                    this whole content area by default - IconHeightRequest/
-                    IconWidthRequest only size the font-icon glyph, not this.
-                    CButtonPadding is reused as this Border's Margin so callers still
-                    get the same inset knob they already use for the icon/text
-                    content, rather than a full-bleed picture painting straight over
-                    the button's own border/background. Selection highlight for this
-                    case is the button's own CButtonStroke/thickness (see Select() in
-                    the code-behind), not a separate ring here.
-                -->
-                <Border
-                    Margin="{Binding CButtonPadding}"
-                    HorizontalOptions="Fill"
-                    StrokeThickness="0"
-                    VerticalOptions="Fill">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="999" />
-                    </Border.StrokeShape>
-                    <Image Aspect="AspectFill" Source="{Binding PictureSource}" />
-                </Border>
-            </Grid>
-
-        </local:AcrylicView>
-
-
-        <Border
-            x:Name="FlatBackground"
-            BackgroundColor="{Binding CButtonBackgroundColor}"
-            IsVisible="{Binding UseAcrylicBackground, Converter={StaticResource InverseBoolConverter}}"
-            Stroke="{Binding CButtonStroke}">
-            <Border.StrokeShape>
-                <RoundRectangle CornerRadius="{Binding CornerRadius}" />
-            </Border.StrokeShape>
-
-            <Grid>
-                <HorizontalStackLayout
-                    Padding="{Binding CButtonPadding}"
-                    HorizontalOptions="Center"
-                    Spacing="{Binding IconTextSpacing}"
-                    VerticalOptions="Center">
-                    <Label
-                        x:Name="FlatTextLabel"
-                        FontAttributes="{Binding FontAttributes}"
-                        FontSize="{Binding FontSize}"
-                        HorizontalOptions="Center"
-                        IsVisible="{Binding Text, Converter={StaticResource IsNotNullOrEmptyConverter}}"
-                        MinimumHeightRequest="0"
-                        Text="{Binding Text}"
-                        TextColor="{Binding TextColor}"
-                        VerticalOptions="Center" />
-
-                    <Grid
-                        x:Name="FlatIconStack"
-                        HorizontalOptions="Center"
-                        IsVisible="{Binding Icon, Converter={StaticResource IsNotNullOrEmptyConverter}}"
-                        VerticalOptions="Center">
-                        <Image
-                            HeightRequest="{Binding IconHeightRequest}"
-                            HorizontalOptions="Center"
-                            MinimumHeightRequest="0"
-                            MinimumWidthRequest="0"
-                            VerticalOptions="Center"
-                            WidthRequest="{Binding IconWidthRequest}">
-                            <Image.Source>
-                                <FontImageSource
-                                    FontFamily="{Binding CurrentFontFamily}"
-                                    Glyph="{Binding Icon}"
-                                    Size="100"
-                                    Color="{Binding IconColor}" />
-                            </Image.Source>
-                        </Image>
-                    </Grid>
-                </HorizontalStackLayout>
-
-                <Border
-                    Margin="{Binding CButtonPadding}"
-                    HorizontalOptions="Fill"
-                    StrokeThickness="0"
-                    VerticalOptions="Fill">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="999" />
-                    </Border.StrokeShape>
-                    <Image Aspect="AspectFill" Source="{Binding PictureSource}" />
-                </Border>
-            </Grid>
-        </Border>
 
     </Grid>
 

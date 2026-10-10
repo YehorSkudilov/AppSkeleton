@@ -609,12 +609,16 @@ public partial class CView : ContentView, ICView
     // Tab pages stay in MainGrid once they have been shown, parked far off to the side when not in view, instead of
     // being removed and added again on every switch: re-adding a page re-attached its whole native view tree and laid
     // it all out again at the start of the slide (for every tab passed through on a multi-tab jump, too), which is what
-    // made switching stutter. Parked off-screen, a page is neither drawn nor hit-tested, and its layout stays cached.
+    // made switching stutter. A parked page is also hidden: only moved off-screen, it was still measured and laid out
+    // with every layout pass of the shell (opening Settings re-laid out every tab), still walked on every frame, and
+    // its blur views still checked every frame whether they were on screen. Hidden, its native views stay attached
+    // and keep their measurements, so bringing it back only lays out the page itself.
     private const double Parked = 100000;
 
     private void Bring(View view, double translationX)
     {
         view.TranslationX = translationX;
+        view.IsVisible = true;
         if (view.Parent != MainGrid)
         {
             EnsureDetached(view);
@@ -622,7 +626,11 @@ public partial class CView : ContentView, ICView
         }
     }
 
-    private static void Park(View view) => view.TranslationX = Parked;
+    private static void Park(View view)
+    {
+        view.TranslationX = Parked;
+        view.IsVisible = false;
+    }
 
     /// <summary>
     /// Adds a tab's page now, parked off to the side, so its views are made ahead of time: otherwise they're made the
@@ -632,9 +640,19 @@ public partial class CView : ContentView, ICView
     {
         if (page == null || page.Parent == MainGrid)
             return;
-        Park(page);
+        // Off to the side but left visible until its first layout, so that's done ahead of time too; hidden after.
+        page.TranslationX = Parked;
+        page.IsVisible = true;
         EnsureDetached(page);
         MainGrid.Children.Add(page);
+
+        void HideOnceLaidOut(object sender, EventArgs e)
+        {
+            page.SizeChanged -= HideOnceLaidOut;
+            if (page.TranslationX == Parked)
+                page.IsVisible = false;
+        }
+        page.SizeChanged += HideOnceLaidOut;
     }
 
     private void EnsureDetached(View view)

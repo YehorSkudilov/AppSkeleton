@@ -57,34 +57,23 @@ public partial class CButton : ContentView
         }
     }
 
-    // AcrylicTextLabel/AcrylicIconStack/FlatTextLabel/FlatIconStack both default to
-    // Grid.Column 0 (CButton.xaml never sets either explicitly), which is exactly the
-    // old fully-overlapping Center layout - so this only needs to actively move
-    // anything for Left/Right. Applied to both the Acrylic and Flat copies since
-    // either one can end up being the visible one depending on UseAcrylicBackground.
+    // TextLabel/IconStack both default to Grid.Column 0 (CButton.xaml never sets either
+    // explicitly), which is exactly the old fully-overlapping Center layout - so this
+    // only needs to actively move anything for Left/Right. Only the acrylic look lays
+    // them out in a Grid; the flat one's HorizontalStackLayout ignores the columns.
     private void ApplyTextPosition()
     {
-        switch (TextPosition)
+        if (textLabel == null || iconStack == null)
+            return;
+
+        var (textColumn, iconColumn) = TextPosition switch
         {
-            case CButtonTextPosition.Left:
-                Grid.SetColumn(AcrylicTextLabel, 0);
-                Grid.SetColumn(AcrylicIconStack, 1);
-                Grid.SetColumn(FlatTextLabel, 0);
-                Grid.SetColumn(FlatIconStack, 1);
-                break;
-            case CButtonTextPosition.Right:
-                Grid.SetColumn(AcrylicIconStack, 0);
-                Grid.SetColumn(AcrylicTextLabel, 1);
-                Grid.SetColumn(FlatIconStack, 0);
-                Grid.SetColumn(FlatTextLabel, 1);
-                break;
-            default:
-                Grid.SetColumn(AcrylicTextLabel, 0);
-                Grid.SetColumn(AcrylicIconStack, 0);
-                Grid.SetColumn(FlatTextLabel, 0);
-                Grid.SetColumn(FlatIconStack, 0);
-                break;
-        }
+            CButtonTextPosition.Left => (0, 1),
+            CButtonTextPosition.Right => (1, 0),
+            _ => (0, 0),
+        };
+        Grid.SetColumn(textLabel, textColumn);
+        Grid.SetColumn(iconStack, iconColumn);
     }
 
     public static readonly BindableProperty FontSizeProperty =
@@ -148,7 +137,8 @@ public partial class CButton : ContentView
 
     // ---------------- SIZE ----------------
     public static readonly BindableProperty IconHeightRequestProperty =
-        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CButton), CButtonIconWHDefault);
+        BindableProperty.Create(nameof(IconHeightRequest), typeof(double), typeof(CButton), CButtonIconWHDefault,
+            propertyChanged: OnIconSizeChanged);
 
     public double IconHeightRequest
     {
@@ -157,13 +147,20 @@ public partial class CButton : ContentView
     }
 
     public static readonly BindableProperty IconWidthRequestProperty =
-        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), CButtonIconWHDefault);
+        BindableProperty.Create(nameof(IconWidthRequest), typeof(double), typeof(CButton), CButtonIconWHDefault,
+            propertyChanged: OnIconSizeChanged);
 
     public double IconWidthRequest
     {
         get => (double)GetValue(IconWidthRequestProperty);
         set => SetValue(IconWidthRequestProperty, value);
     }
+
+    // What the glyph is rendered at: the size it's shown at, so the bitmap is no bigger than what's on screen.
+    public double IconRenderSize => Math.Max(1, Math.Max(IconWidthRequest, IconHeightRequest));
+
+    private static void OnIconSizeChanged(BindableObject bindable, object oldValue, object newValue)
+        => ((CButton)bindable).OnPropertyChanged(nameof(IconRenderSize));
 
     // ---------------- ICON COLOR ----------------
     public static readonly BindableProperty IconColorProperty =
@@ -184,7 +181,8 @@ public partial class CButton : ContentView
     // CButtonPadding like everything else in that Grid, rather than full-bleed, so it
     // never paints over the button's own border/background.
     public static readonly BindableProperty PictureSourceProperty =
-        BindableProperty.Create(nameof(PictureSource), typeof(ImageSource), typeof(CButton));
+        BindableProperty.Create(nameof(PictureSource), typeof(ImageSource), typeof(CButton),
+            propertyChanged: (bindable, _, _) => ((CButton)bindable).UpdatePicture());
 
     public ImageSource PictureSource
     {
@@ -223,7 +221,7 @@ public partial class CButton : ContentView
     // would freeze in the wrong, pre-override value) so Select(false) can restore
     // whatever the button's stroke actually was before it was ever selected.
     private Color? unselectedStrokeColor;
-    private Thickness? unselectedStrokeThickness;
+    private bool isSelected;
 
     // ---------------- PADDING ----------------
     // Padding of the button's whole content area (both Text and Icon), inset from the
@@ -369,7 +367,8 @@ public partial class CButton : ContentView
     // false to fall back to a flat Border using the same CButtonStroke/
     // CButtonBackgroundColor colors, no blur.
     public static readonly BindableProperty UseAcrylicBackgroundProperty =
-        BindableProperty.Create(nameof(UseAcrylicBackground), typeof(bool), typeof(CButton), false);
+        BindableProperty.Create(nameof(UseAcrylicBackground), typeof(bool), typeof(CButton), false,
+            propertyChanged: (bindable, _, _) => ((CButton)bindable).RebuildBackground());
 
     public bool UseAcrylicBackground
     {
@@ -387,6 +386,90 @@ public partial class CButton : ContentView
         // hook - Loaded isn't guaranteed to fire for elements inside a ContentView.
         MainGrid.HandlerChanged += (_, _) => ApplyAndroidRipple();
 #endif
+    }
+
+    // ---------------- BACKGROUND (only the look in use is built) ----------------
+    private View? background;
+    private Grid? contentGrid;
+    private View? textLabel;
+    private View? iconStack;
+    private View? picture;
+
+    // Built once the button is placed rather than in the constructor: a consumer's
+    // UseAcrylicBackground="True" is applied by the XAML parser after the constructor
+    // returns, so building there would make the flat look first only to throw it away.
+    protected override void OnParentSet()
+    {
+        base.OnParentSet();
+        if (Parent != null)
+            EnsureBackground();
+    }
+
+    private void EnsureBackground()
+    {
+        if (background != null)
+            return;
+
+        var key = UseAcrylicBackground ? "AcrylicTemplate" : "FlatTemplate";
+        var root = (View)((DataTemplate)Resources[key]).CreateContent();
+
+        background = root;
+        contentGrid = root.FindByName<Grid>("ContentGrid");
+        textLabel = root.FindByName<View>("TextLabel");
+        iconStack = root.FindByName<View>("IconStack");
+        picture = null;
+
+        MainGrid.Children.Insert(0, root);
+
+        ApplyTextPosition();
+        ApplyStrokeThickness();
+        UpdatePicture();
+    }
+
+    private void RebuildBackground()
+    {
+        if (background == null)
+            return;
+
+        MainGrid.Children.Remove(background);
+        background = null;
+        EnsureBackground();
+    }
+
+    private void UpdatePicture()
+    {
+        if (contentGrid == null)
+            return;
+
+        if (PictureSource == null)
+        {
+            if (picture != null)
+            {
+                contentGrid.Children.Remove(picture);
+                picture = null;
+            }
+            return;
+        }
+
+        if (picture == null)
+        {
+            picture = (View)((DataTemplate)Resources["PictureTemplate"]).CreateContent();
+            contentGrid.Children.Add(picture);
+        }
+    }
+
+    private void ApplyStrokeThickness()
+    {
+        double thickness = isSelected ? SelectedStrokeThickness : 1;
+        switch (background)
+        {
+            case AcrylicView acrylic:
+                acrylic.BorderThickness = new Thickness(thickness);
+                break;
+            case Border border:
+                border.StrokeThickness = thickness;
+                break;
+        }
     }
 
     // ---------------- TAP HANDLER ----------------
@@ -420,11 +503,10 @@ public partial class CButton : ContentView
         // AcrylicView.BorderThickness's own default, so every reassignment below is a
         // same-value no-op for any button that hasn't opted in by setting them.
         unselectedStrokeColor ??= CButtonStroke;
-        unselectedStrokeThickness ??= AcrylicBackground.BorderThickness;
 
         CButtonStroke = select ? SelectedStrokeColor : unselectedStrokeColor;
-        AcrylicBackground.BorderThickness = select ? new Thickness(SelectedStrokeThickness) : unselectedStrokeThickness.Value;
-        FlatBackground.StrokeThickness = select ? SelectedStrokeThickness : 1;
+        isSelected = select;
+        ApplyStrokeThickness();
 
         if (IsSelectable)
         {

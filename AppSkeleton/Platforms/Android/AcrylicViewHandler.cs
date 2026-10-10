@@ -78,6 +78,25 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, FrameLayout>
 
             SetMeasuredDimension(width, height);
         }
+
+        // MAUI measures with AtMost (so the frame hugs its content) but then lays the frame out at whatever its
+        // alignment gives it - e.g. HorizontalOptions="Fill" stretches it to the parent's width. FrameLayout places
+        // children at their measured size, so without this the layers stayed content-sized inside a wider frame.
+        protected override void OnLayout(bool changed, int left, int top, int right, int bottom)
+        {
+            var width = right - left;
+            var height = bottom - top;
+
+            if (Content != null && (Content.MeasuredWidth != width || Content.MeasuredHeight != height))
+            {
+                var exactWidth = MeasureSpec.MakeMeasureSpec(width, Android.Views.MeasureSpecMode.Exactly);
+                var exactHeight = MeasureSpec.MakeMeasureSpec(height, Android.Views.MeasureSpecMode.Exactly);
+                for (var i = 0; i < ChildCount; i++)
+                    GetChildAt(i)?.Measure(exactWidth, exactHeight);
+            }
+
+            base.OnLayout(changed, left, top, right, bottom);
+        }
     }
 
     // Called around each blur capture, so the content isn't blurred into its own background.
