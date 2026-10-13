@@ -301,6 +301,12 @@ public class RealtimeBlurView : View
         mBlurImpl.Blur(bitmapToBlur, blurredBitmap);
     }
 
+    /// <summary>
+    /// The least time between two captures of what's behind (before Android 12, where each is a software redraw of
+    /// the window). 33ms, about 30 a second, by default; an app on slow hardware (a TV box) can capture less often.
+    /// </summary>
+    public static long MinCaptureIntervalMs { get; set; } = 33;
+
     private readonly PreDrawListener preDrawListener;
 
     private class PreDrawListener : Java.Lang.Object, ViewTreeObserver.IOnPreDrawListener
@@ -327,8 +333,8 @@ public class RealtimeBlurView : View
 
         // Capturing means drawing everything behind the view in software, every frame something on screen changes - the
         // costliest thing the app does while scrolling. The blur is wide and tinted, so a capture at most this often
-        // looks the same; a frame skipped for it schedules one later capture, so it still ends on what's behind it now.
-        private const long MinCaptureIntervalMs = 33;
+        // looks the same (see MinCaptureIntervalMs); a frame skipped for it schedules one later capture, so it still
+        // ends on what's behind it now.
         private long _lastCaptureTicks;
         private bool _catchUpPosted;
         private readonly Android.Graphics.Rect _visibleRect = new();
@@ -360,12 +366,12 @@ public class RealtimeBlurView : View
 
             long now = System.Environment.TickCount64;
             long since = now - _lastCaptureTicks;
-            if (since < MinCaptureIntervalMs)
+            if (since < RealtimeBlurView.MinCaptureIntervalMs)
             {
                 if (!_catchUpPosted)
                 {
                     _catchUpPosted = true;
-                    blurView.PostInvalidateDelayed(MinCaptureIntervalMs - since);
+                    blurView.PostInvalidateDelayed(RealtimeBlurView.MinCaptureIntervalMs - since);
                 }
                 return true;
             }
