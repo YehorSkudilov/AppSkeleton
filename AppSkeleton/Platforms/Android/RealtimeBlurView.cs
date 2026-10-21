@@ -543,7 +543,16 @@ public class RealtimeBlurView : View
         {
             _blurNode.EndRecording();
         }
+
+        // Updating the node changes what an already-drawn view shows without a new frame of its own, but a view whose
+        // only draw came before the first recording drew nothing (no display list yet) and was never asked to draw
+        // again - a button that otherwise never changes (a floating +) stayed see-through for good, while ones that
+        // redraw anyway (the nav bar, on every selection) looked fine. So draw again until the node has been drawn once.
+        if (!_blurNodeDrawn)
+            Invalidate();
     }
+
+    private bool _blurNodeDrawn;
 
     // The way from the root down to this view, and at each step the children drawn before the next one: kept between
     // recordings, as finding them again went through Java for every view on the way each frame. Made again when this
@@ -664,6 +673,7 @@ public class RealtimeBlurView : View
         if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
         if (_blurNode == null || !_blurNode.HasDisplayList || !canvas.IsHardwareAccelerated) return;
 
+        _blurNodeDrawn = true;
         _clipPath ??= new Path();
         _clipPath.Reset();
         _clipPath.AddRoundRect(0, 0, Width, Height, mRadii, Path.Direction.Cw);
@@ -677,6 +687,7 @@ public class RealtimeBlurView : View
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
         _blurNode?.DiscardDisplayList();
+        _blurNodeDrawn = false;
         foreach (var node in _siblingNodes)
             node.DiscardDisplayList();
     }
