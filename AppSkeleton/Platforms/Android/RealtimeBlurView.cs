@@ -361,6 +361,13 @@ public class RealtimeBlurView : View
             if (blurView.UseRenderNode)
             {
                 blurView.RecordBehind();
+
+                // Drawn before it had anything recorded (see _blurNodeMissed): drawn once more, now that it has.
+                if (blurView._blurNodeMissed)
+                {
+                    blurView._blurNodeMissed = false;
+                    blurView.Invalidate();
+                }
                 return true;
             }
 
@@ -668,10 +675,22 @@ public class RealtimeBlurView : View
         canvas.RestoreToCount(save);
     }
 
+    // Set when the view was drawn while nothing was recorded yet: just attached (the recording starts a moment
+    // later), or brought in from off-screen (nothing is recorded there). Recording later doesn't draw the view
+    // again - only a node it already drew shows the new recording - so without drawing it once more, its blur
+    // stayed blank until something else happened to redraw it (the floating acrylic buttons on the pages never did).
+    private bool _blurNodeMissed;
+
     private void DrawRoundedBlurNode(Canvas canvas)
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(31)) return;
-        if (_blurNode == null || !_blurNode.HasDisplayList || !canvas.IsHardwareAccelerated) return;
+        if (!canvas.IsHardwareAccelerated) return;
+        if (_blurNode == null || !_blurNode.HasDisplayList)
+        {
+            _blurNodeMissed = true;
+            return;
+        }
+        _blurNodeMissed = false;
 
         _blurNodeDrawn = true;
         _clipPath ??= new Path();
