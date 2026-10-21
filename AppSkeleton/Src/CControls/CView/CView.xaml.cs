@@ -461,12 +461,14 @@ public partial class CView : ContentView, ICView
 
             currentCNavItem = target;
 
-            // Every other page goes out of view: parked if it's still one of the tabs (see Park), removed if it isn't.
+            // Every other page goes out of view: parked if it's still one of the tabs or was preloaded (see Park),
+            // removed if it isn't - a page shown again and again (Settings) was otherwise torn down on every visit and
+            // its whole view tree made and laid out again the next time.
             foreach (var child in MainGrid.Children.OfType<View>().ToList())
             {
                 if (child == currentCNavItem.Page)
                     continue;
-                if (CNavIconItems?.Any(item => item.Page == child) == true)
+                if (preloadedPages.Contains(child) || CNavIconItems?.Any(item => item.Page == child) == true)
                     Park(child);
                 else
                     MainGrid.Children.Remove(child);
@@ -632,13 +634,21 @@ public partial class CView : ContentView, ICView
         view.IsVisible = false;
     }
 
+    // Pages handed to Preload: kept (parked) once they go out of view, like the tabs, even if they aren't one.
+    private readonly HashSet<View> preloadedPages = [];
+
     /// <summary>
-    /// Adds a tab's page now, parked off to the side, so its views are made ahead of time: otherwise they're made the
-    /// first time it's brought in, a hitch just as it should start sliding. Does nothing for a page already in.
+    /// Adds a page now, parked off to the side, so its views are made ahead of time: otherwise they're made the
+    /// first time it's brought in, a hitch just as it should start sliding. The page is kept from then on, parked
+    /// rather than removed when it goes out of view, so a page that isn't a tab but is shown often (Settings) can be
+    /// preloaded too. Does nothing for a page already in.
     /// </summary>
     public void Preload(View page)
     {
-        if (page == null || page.Parent == MainGrid)
+        if (page == null)
+            return;
+        preloadedPages.Add(page);
+        if (page.Parent == MainGrid)
             return;
         // Off to the side but left visible until its first layout, so that's done ahead of time too; hidden after.
         page.TranslationX = Parked;
