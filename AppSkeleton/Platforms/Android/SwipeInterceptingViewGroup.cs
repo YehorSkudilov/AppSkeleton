@@ -46,6 +46,11 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
     // mid-drag can't retroactively cancel a pull that's already committed to.
     private bool pullEligibleAtDown;
 
+    // The horizontally scrollable descendant under the finger at ACTION_DOWN (a sideways
+    // ScrollView, a horizontal CollectionView), if any. A horizontal drag is left to it
+    // while it can still scroll that way, and only pages tabs once it's at that end.
+    private View? horizontalScrollerAtDown;
+
     protected override void OnMeasure(int widthMeasureSpec, int heightMeasureSpec)
     {
         Context context = Context;
@@ -116,7 +121,10 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
         if (Math.Abs(dx) > touchSlopPx && Math.Abs(dx) > Math.Abs(dy) * CView.DirectionLockRatio)
         {
             decided = true;
-            gestureKind = GestureKind.Horizontal;
+            // Finger moving left scrolls the content right (direction 1), and vice versa.
+            gestureKind = horizontalScrollerAtDown?.CanScrollHorizontally(dx < 0 ? 1 : -1) == true
+                ? GestureKind.None
+                : GestureKind.Horizontal;
         }
         else if (dy > touchSlopPx && dy > Math.Abs(dx) * CView.DirectionLockRatio && pullEligibleAtDown)
         {
@@ -160,6 +168,32 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
         }
     }
 
+    // The innermost visible descendant at (x, y) - in `group`'s own coordinates - that can
+    // scroll horizontally either way. Parked tab pages (see IsAtTop) are skipped.
+    private static View? HorizontalScrollerAt(ViewGroup group, float x, float y)
+    {
+        for (int i = group.ChildCount - 1; i >= 0; i--)
+        {
+            var child = group.GetChildAt(i);
+            if (child == null || child.Visibility != ViewStates.Visible)
+                continue;
+            if (group.Width > 0 && Math.Abs(child.TranslationX) >= group.Width)
+                continue;
+
+            float cx = x + group.ScrollX - child.Left - child.TranslationX;
+            float cy = y + group.ScrollY - child.Top - child.TranslationY;
+            if (cx < 0 || cy < 0 || cx >= child.Width || cy >= child.Height)
+                continue;
+
+            if (child is ViewGroup childGroup && HorizontalScrollerAt(childGroup, cx, cy) is { } inner)
+                return inner;
+            if (child.CanScrollHorizontally(1) || child.CanScrollHorizontally(-1))
+                return child;
+        }
+
+        return null;
+    }
+
     public override bool OnInterceptTouchEvent(MotionEvent? ev)
     {
         if (ev == null) return gestureKind != GestureKind.None;
@@ -172,6 +206,7 @@ public class SwipeInterceptingViewGroup(Context context) : FrameLayout(context)
                 decided = false;
                 gestureKind = GestureKind.None;
                 pullEligibleAtDown = IsAtTop(this);
+                horizontalScrollerAtDown = HorizontalScrollerAt(this, downX, downY);
                 break;
 
             case MotionEventActions.Move:
