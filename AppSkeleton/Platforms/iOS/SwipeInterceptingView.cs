@@ -117,4 +117,17 @@ public class AlwaysRecognizeSimultaneouslyDelegate : UIGestureRecognizerDelegate
 {
     public override bool ShouldRecognizeSimultaneously(UIGestureRecognizer gestureRecognizer, UIGestureRecognizer otherGestureRecognizer)
         => true;
+
+    // Running alongside everything also meant running alongside a UISlider's (or a UISwitch's) own drag, so sliding
+    // one sideways paged the tabs too. A touch that starts on such a control is left to it alone, as Android's
+    // SeekBar gets by asking its parents not to intercept.
+    public override bool ShouldReceiveTouch(UIGestureRecognizer recognizer, UITouch touch)
+    {
+        for (var view = touch.View; view != null && view != recognizer.View; view = view.Superview)
+        {
+            if (view is UISlider or UISwitch)
+                return false;
+        }
+        return true;
+    }
 }
