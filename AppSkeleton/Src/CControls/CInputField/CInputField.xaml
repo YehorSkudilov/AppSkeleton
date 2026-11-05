@@ -37,9 +37,12 @@
                 Grid.Column="1"
                 Padding="{OnPlatform WinUI='-2'}"
                 IsClippedToBounds="True">
+                <!--  Centred in the box rather than stretched to it: stretched, it kept its own height at the top of a taller
+                      box (a 52-tall field), and the text sat above the middle, out of line with the icon and the toggle  -->
                 <Entry
                     x:Name="Input"
                     Margin="0"
+                    VerticalOptions="Center"
                     Completed="OnCompleted"
                     Text="{Binding Text, Source={x:Reference Root}, Mode=TwoWay}"
                     TextChanged="OnTextChanged" />
