@@ -116,6 +116,13 @@ public partial class CView : ContentView, ICView
 
     private bool isPulling;
 
+    // How far the pull is now, which follows each move of the finger but never past
+    // PullCommitDistance: pulled further down and then back up, it comes back up with the
+    // very first move up, rather than only once the finger is back above the commit
+    // distance from where it went down. pullLastDy is the total offset at the last update.
+    private double pullDistance;
+    private double pullLastDy;
+
     public event EventHandler<double> PullProgressChanged;
     public event EventHandler PullCommitted;
     public event EventHandler PullCancelled;
@@ -136,13 +143,19 @@ public partial class CView : ContentView, ICView
         if (IsNavigating && !isPulling)
             return;
 
+        if (!isPulling)
+        {
+            pullDistance = 0;
+            pullLastDy = 0;
+        }
         isPulling = true;
 
-        double progress = Math.Max(0, dy) / PullCommitDistance;
-        PullProgressChanged?.Invoke(this, progress);
+        pullDistance = Math.Clamp(pullDistance + (dy - pullLastDy), 0, PullCommitDistance);
+        pullLastDy = dy;
+        PullProgressChanged?.Invoke(this, pullDistance / PullCommitDistance);
     }
 
-    // Called once the finger lifts - commits or cancels purely off release distance, no
+    // Called once the finger lifts - commits or cancels purely off the pull's distance, no
     // fling shortcut like the horizontal drag has (a pull-to-refresh commit is a
     // deliberate "far enough", not a flick).
     internal void PullEnd(double dy)
@@ -152,7 +165,10 @@ public partial class CView : ContentView, ICView
 
         isPulling = false;
 
-        if (Math.Max(0, dy) >= PullCommitDistance)
+        // Released where the indicator shows it: all the way (full), having come back up from
+        // further down or not, commits; anything less, after easing back up, doesn't.
+        pullDistance = Math.Clamp(pullDistance + (dy - pullLastDy), 0, PullCommitDistance);
+        if (pullDistance >= PullCommitDistance)
             PullCommitted?.Invoke(this, EventArgs.Empty);
         else
             PullCancelled?.Invoke(this, EventArgs.Empty);
