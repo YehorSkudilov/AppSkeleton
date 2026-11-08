@@ -156,8 +156,14 @@ public partial class CButton : ContentView
         set => SetValue(IconWidthRequestProperty, value);
     }
 
-    // What the glyph is rendered at: the size it's shown at, so the bitmap is no bigger than what's on screen.
+    // What the glyph is rendered at: the size it's shown at, so the bitmap is no bigger than what's on screen. Except on
+    // Windows, which renders it at that many pixels without the display's scaling: at 150-250% a 28 px "+" was stretched
+    // to 70 and blurry. There it's rendered at least 100 and shown at its size, as the apps' own icons are.
+#if WINDOWS
+    public double IconRenderSize => Math.Max(100, Math.Max(IconWidthRequest, IconHeightRequest));
+#else
     public double IconRenderSize => Math.Max(1, Math.Max(IconWidthRequest, IconHeightRequest));
+#endif
 
     private static void OnIconSizeChanged(BindableObject bindable, object oldValue, object newValue)
         => ((CButton)bindable).OnPropertyChanged(nameof(IconRenderSize));
