@@ -1,6 +1,7 @@
 ﻿
 
 #if ANDROID || IOS
+using Microsoft.Extensions.DependencyInjection;
 using Plugin.AdMob.Services;
 using Plugin.AdMob;
 using System.Diagnostics;
@@ -20,7 +21,8 @@ namespace AppSkeleton
             CallBack = callBack;
 #if ANDROID || IOS
 
-            _rewardedAdService = ServiceProvider.GetRequiredService<IRewardedAdService>();
+            // Plugin.AdMob 11 dropped its own static ServiceProvider: the app's services (UseAdMob registers it there).
+            _rewardedAdService = IPlatformApplication.Current!.Services.GetRequiredService<IRewardedAdService>();
 
             _rewardedAdService.OnAdLoaded += (_, __) => Debug.WriteLine("Rewarded ad prepared.");
             _rewardedAdService.PrepareAd(onUserEarnedReward: UserDidEarnReward);
