@@ -25,7 +25,10 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, BorderView>
         {
             Frame = VirtualView.Frame,
             ClipsToBounds = true,
-            Effect = UIBlurEffect.FromStyle(UIBlurEffectStyle.Light)
+            // Custom (the default): a thin dark blur, with TintColor on top doing the rest -
+            // as on Android, where Custom is a plain blur plus the tint. A Light blur here
+            // washed dark backgrounds out to grey.
+            Effect = UIBlurEffect.FromStyle(UIBlurEffectStyle.SystemUltraThinMaterialDark)
         };
 
         return borderView;

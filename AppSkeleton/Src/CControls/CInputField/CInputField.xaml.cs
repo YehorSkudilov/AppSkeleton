@@ -160,6 +160,20 @@ public partial class CInputField : ContentView
     public CInputField()
     {
         InitializeComponent();
+        Input.HandlerChanged += (_, _) => RemoveNativeChrome();
+    }
+
+    // The box is ours (Box), so iOS's own rounded box inside it goes - the field then looks
+    // as it does on Android.
+    void RemoveNativeChrome()
+    {
+#if IOS || MACCATALYST
+        if (Input.Handler?.PlatformView is UIKit.UITextField field)
+        {
+            field.BorderStyle = UIKit.UITextBorderStyle.None;
+            field.BackgroundColor = UIKit.UIColor.Clear;
+        }
+#endif
     }
 
     // A property that only reaches the Entry once it's set, so the app's implicit Entry style applies otherwise.
