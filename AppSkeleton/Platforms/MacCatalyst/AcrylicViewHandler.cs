@@ -25,10 +25,10 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, BorderView>
         {
             Frame = VirtualView.Frame,
             ClipsToBounds = true,
-            // Custom (the default): a thin dark blur, with TintColor on top doing the rest -
-            // as on Android, where Custom is a plain blur plus the tint. A Light blur here
-            // washed dark backgrounds out to grey.
-            Effect = UIBlurEffect.FromStyle(UIBlurEffectStyle.SystemUltraThinMaterialDark)
+            // Custom (the default): no material at all, just TintColor - as on Android, where
+            // Custom is a plain blur plus the tint. Every iOS blur material lays its own grey
+            // or white over the view, which washed the apps' green backgrounds out.
+            Effect = null
         };
 
         return borderView;
@@ -91,10 +91,13 @@ public partial class AcrylicViewHandler : ViewHandler<IAcrylicView, BorderView>
 
     private static void MapEffectStyle(AcrylicViewHandler handler, IAcrylicView view)
     {
-        if (view.EffectStyle == EffectStyle.Custom)
-            return;
         if (handler == null)
             return;
+        if (view.EffectStyle == EffectStyle.Custom)
+        {
+            handler.acrylicEffectView.Effect = null;
+            return;
+        }
 
         // var ver = UIDevice.CurrentDevice.SystemVersion;
 
