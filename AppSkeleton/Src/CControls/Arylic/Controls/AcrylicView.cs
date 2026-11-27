@@ -6,6 +6,14 @@ namespace AppSkeleton;
 
 public partial class AcrylicView : ContentView, IAcrylicView
 {
+    /// <summary>
+    /// iPhone, iPad and Mac, app-wide: whether <see cref="EffectStyle.Custom"/> (the default) blurs what's behind it, a thin
+    /// dark material under the tint (frosted glass), set before the first one is shown. Off (the default): just the tint,
+    /// as BudgetBuddy wants over its gradients, where every iOS material laid its own grey. Gym Book turns it on: its
+    /// glass nav bar and floating buttons were just see-through without it.
+    /// </summary>
+    public static bool BlurCustomOnApple { get; set; }
+
     public static readonly BindableProperty BorderColorProperty = BindableProperty.Create(nameof(BorderColor), typeof(Color), typeof(AcrylicView), Colors.Transparent);
 
     public static readonly BindableProperty BorderThicknessProperty = BindableProperty.Create(nameof(BorderThickness), typeof(Thickness), typeof(AcrylicView), new Thickness(1.0));
